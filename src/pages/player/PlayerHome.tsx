@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
@@ -65,6 +65,20 @@ export default function PlayerHome() {
       subtitle="Crea tu alias y únete a la sesión"
       back={{ to: "/", label: "Inicio" }}
     >
+      <Card tone="night" className="flex flex-col gap-2">
+        <p className="font-label text-xs text-[--color-cream]/80">
+          ¿TE DIERON UN ENLACE DEL MAESTRO?
+        </p>
+        <p className="text-sm text-[--color-cream]/70">
+          Si recibiste un enlace de bienvenida (identidad + saldo inicial)
+          por WhatsApp, ábrelo directamente. Entras ya con tus fichas listas.
+          También puedes pegarlo en{" "}
+          <Link to="/ingest" className="text-[--color-gold-300] underline">
+            Tengo un código
+          </Link>
+          .
+        </p>
+      </Card>
       <Card className="flex flex-col gap-4">
         {session ? (
           <div className="flex items-center justify-between rounded-xl bg-[--color-felt-700]/60 px-4 py-2">

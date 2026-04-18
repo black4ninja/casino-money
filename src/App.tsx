@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Ingest from "./pages/Ingest";
+import Simulator from "./pages/Simulator";
 import AdminSession from "./pages/admin/AdminSession";
 import AdminOverview from "./pages/admin/AdminOverview";
+import AdminCaja from "./pages/admin/AdminCaja";
+import AdminRoster from "./pages/admin/AdminRoster";
 import PlayerHome from "./pages/player/PlayerHome";
 import PlayerWallet from "./pages/player/PlayerWallet";
 import PlayerIdentity from "./pages/player/PlayerIdentity";
@@ -21,9 +24,12 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/ingest" element={<Ingest />} />
+      <Route path="/dev" element={<Simulator />} />
 
       <Route path="/admin" element={<AdminSession />} />
       <Route path="/admin/overview" element={<AdminOverview />} />
+      <Route path="/admin/caja" element={<AdminCaja />} />
+      <Route path="/admin/roster" element={<AdminRoster />} />
 
       <Route path="/player" element={<PlayerHome />} />
       <Route path="/player/wallet" element={<PlayerWallet />} />

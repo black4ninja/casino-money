@@ -44,6 +44,12 @@ export default function Landing() {
         title="Tengo un código"
         desc="Pegar un código o enlace sin usar la cámara"
       />
+      <RoleLink
+        to="/dev"
+        emoji="⚙"
+        title="Simulador"
+        desc="Probar todos los flujos en una sola pantalla (sin cámara ni QR)"
+      />
     </AppLayout>
   );
 }

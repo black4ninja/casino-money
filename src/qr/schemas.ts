@@ -77,6 +77,28 @@ export type DealerStatsQR = {
   uniquePlayers: string[];
 };
 
+/**
+ * Welcome kit: a pre-assembled bundle that hands a student a complete,
+ * ready-to-play profile (identity + keypair + welcome chips) in one scan/link.
+ * The teacher generates these in batch from the Roster page and distributes
+ * via WhatsApp or printed QR. Whoever opens the link effectively BECOMES that
+ * student — treat the link as private, like a login credential.
+ */
+export type WelcomeKitQR = {
+  v: typeof QR_VERSION;
+  type: "welcome-kit";
+  session: Session;
+  alias: string;
+  /** Base64url-encoded 32-byte Ed25519 secret key. */
+  secretKey: string;
+  /** Derived playerId, included so the chip issuedTo is verifiable offline. */
+  playerId: string;
+  /** Base64url-encoded pubkey — convenience so the player app skips derivation. */
+  pubKey: string;
+  /** Pre-signed chips distributed across the session's mesas. */
+  chips: Chip[];
+};
+
 export type AnyQR =
   | SessionQR
   | IdentityQR
@@ -84,7 +106,8 @@ export type AnyQR =
   | RedeemQR
   | TransferQR
   | ReceiptQR
-  | DealerStatsQR;
+  | DealerStatsQR
+  | WelcomeKitQR;
 
 /** Narrow an unknown parsed payload. */
 export function isValidQR(value: unknown): value is AnyQR {
@@ -98,6 +121,7 @@ export function isValidQR(value: unknown): value is AnyQR {
     obj.type === "redeem" ||
     obj.type === "transfer" ||
     obj.type === "receipt" ||
-    obj.type === "dealer-stats"
+    obj.type === "dealer-stats" ||
+    obj.type === "welcome-kit"
   );
 }

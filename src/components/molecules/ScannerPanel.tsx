@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { QRScanner } from "./QRScanner";
 import { Button } from "../atoms/Button";
+import { extractPayloadFromText } from "@/qr/codec";
 
 type Props = {
   onDecoded: (text: string) => void;
@@ -18,20 +19,21 @@ export function ScannerPanel({ onDecoded, onError, paused }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   function submitPaste() {
-    const text = pasted.trim();
-    if (!text) {
+    if (!pasted.trim()) {
       setError("Pega el código primero.");
       return;
     }
-    // Extract the cm1: payload from either raw paste or a full ingest URL.
-    const match = text.match(/cm1:[^\s"'<>]+/);
-    if (!match) {
-      setError("El código debe empezar con cm1:");
+    // Accepts raw codes (cm1:/cm2:), URL-encoded codes, or full share URLs with ?c=…
+    const payload = extractPayloadFromText(pasted);
+    if (!payload) {
+      setError(
+        "No encontré un código válido. Pega un código (cm1:/cm2:) o un enlace completo.",
+      );
       return;
     }
     setError(null);
     setPasted("");
-    onDecoded(match[0]);
+    onDecoded(payload);
   }
 
   return (
@@ -55,7 +57,7 @@ export function ScannerPanel({ onDecoded, onError, paused }: Props) {
           <textarea
             value={pasted}
             onChange={(e) => setPasted(e.target.value)}
-            placeholder="cm1:... o https://…/#/ingest?c=…"
+            placeholder="cm2:… o https://…/#/ingest?c=…"
             rows={5}
             className="w-full resize-none rounded-xl border border-[--color-gold-500]/40 bg-[--color-smoke]/70 p-3 font-mono text-xs text-[--color-ivory] placeholder-[--color-cream]/30 focus:border-[--color-gold-400] focus:outline-none"
           />

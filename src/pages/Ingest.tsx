@@ -13,6 +13,7 @@ import { base64UrlToBytes } from "@/crypto/encoding";
 import { verifyChipSignature, verifyWalletChip } from "@/domain/chip";
 import { verifyEndorsementSignatures } from "@/domain/endorsement";
 import type { HistoryEntry, WalletChip } from "@/domain/types";
+import type { PlayerAccount } from "@/domain/player";
 
 type Processed =
   | { kind: "decoded"; payload: AnyQR; raw: string }
@@ -24,6 +25,7 @@ export default function Ingest() {
   const session = useSessionStore((s) => s.session);
   const setSession = useSessionStore((s) => s.setSession);
   const account = usePlayerStore((s) => s.account);
+  const setAccount = usePlayerStore((s) => s.setAccount);
   const addChips = usePlayerStore((s) => s.addChips);
   const appendHistory = usePlayerStore((s) => s.appendHistory);
   const hydrate = usePlayerStore((s) => s.hydrateForSession);
@@ -49,6 +51,56 @@ export default function Ingest() {
     if (state?.kind !== "decoded" || state.payload.type !== "session") return;
     setSession(state.payload.session);
     setApplied("Sesión activada. Puedes volver al inicio.");
+  }
+
+  function applyWelcomeKit() {
+    if (state?.kind !== "decoded" || state.payload.type !== "welcome-kit") return;
+    const kit = state.payload;
+    // Save the session so the pubkey and mesas are available.
+    setSession(kit.session);
+    // Import the student's pre-made account.
+    const kitAccount: PlayerAccount = {
+      identity: {
+        playerId: kit.playerId,
+        pubKey: kit.pubKey,
+        alias: kit.alias,
+      },
+      secretKey: kit.secretKey,
+    };
+    setAccount(kitAccount);
+
+    // Verify every chip before adding to the wallet.
+    const dealerPubKey = base64UrlToBytes(kit.session.dealerPubKey);
+    const acceptable: WalletChip[] = [];
+    let rejected = 0;
+    for (const chip of kit.chips) {
+      if (chip.issuedTo !== kit.playerId) {
+        rejected++;
+        continue;
+      }
+      if (!verifyChipSignature(chip, dealerPubKey)) {
+        rejected++;
+        continue;
+      }
+      acceptable.push({ chip, endorsements: [] });
+    }
+    if (acceptable.length > 0) {
+      addChips(kit.session.sessionId, acceptable);
+      const history: HistoryEntry[] = acceptable.map((wc) => ({
+        kind: "receive",
+        serial: wc.chip.serial,
+        denom: wc.chip.denom,
+        from: wc.chip.dealerId,
+        at: Date.now(),
+      }));
+      appendHistory(kit.session.sessionId, history);
+      hydrate(kit.session.sessionId);
+    }
+    const total = acceptable.reduce((a, wc) => a + wc.chip.denom, 0);
+    const msg = rejected
+      ? `Bienvenido/a, ${kit.alias}. $${total.toLocaleString("es-MX")} agregado (${rejected} ficha${rejected === 1 ? "" : "s"} rechazada${rejected === 1 ? "" : "s"}).`
+      : `Bienvenido/a, ${kit.alias}. $${total.toLocaleString("es-MX")} agregados a tu cartera.`;
+    setApplied(msg);
   }
 
   function applyChipsOrTransfer() {
@@ -192,6 +244,7 @@ export default function Ingest() {
           hasAccount={!!account}
           onApplySession={applySession}
           onApplyChips={applyChipsOrTransfer}
+          onApplyWelcomeKit={applyWelcomeKit}
         />
       )}
 
@@ -202,7 +255,8 @@ export default function Ingest() {
           <div className="mt-4 flex flex-wrap gap-2">
             {state?.kind === "decoded" &&
               (state.payload.type === "chips" ||
-                state.payload.type === "transfer") && (
+                state.payload.type === "transfer" ||
+                state.payload.type === "welcome-kit") && (
                 <Button variant="gold" onClick={goToWallet}>
                   Ver cartera
                 </Button>
@@ -234,12 +288,14 @@ function Decoded({
   hasAccount,
   onApplySession,
   onApplyChips,
+  onApplyWelcomeKit,
 }: {
   payload: AnyQR;
   hasSession: boolean;
   hasAccount: boolean;
   onApplySession: () => void;
   onApplyChips: () => void;
+  onApplyWelcomeKit: () => void;
 }) {
   switch (payload.type) {
     case "session":
@@ -255,6 +311,34 @@ function Decoded({
           </Button>
         </Card>
       );
+    case "welcome-kit": {
+      const total = payload.chips.reduce((a, c) => a + c.denom, 0);
+      const willReplace = hasAccount;
+      return (
+        <Card className="flex flex-col gap-3">
+          <Badge tone="gold">KIT DE BIENVENIDA</Badge>
+          <p className="font-display text-2xl gold-shine">{payload.alias}</p>
+          <p className="text-sm text-[--color-cream]/80">
+            ${total.toLocaleString("es-MX")} en {payload.chips.length} fichas ·
+            {" "}
+            {payload.session.label}
+          </p>
+          <p className="text-xs text-[--color-cream]/60">
+            Este kit contiene tu identidad y tu saldo inicial. Al aceptar, tu
+            app se configura como {payload.alias} y podrás empezar a jugar.
+          </p>
+          {willReplace && (
+            <p className="text-xs text-[--color-carmine-400]">
+              Ya tienes una cuenta en este dispositivo. Al aceptar, se
+              reemplaza por la cuenta de {payload.alias}.
+            </p>
+          )}
+          <Button variant="gold" onClick={onApplyWelcomeKit} block>
+            Soy {payload.alias} — entrar al casino
+          </Button>
+        </Card>
+      );
+    }
     case "chips":
       return (
         <Card className="flex flex-col gap-3">

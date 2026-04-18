@@ -24,6 +24,8 @@ export default function AdminSession() {
   const [label, setLabel] = useState("Casino Primavera 2026");
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
+  const [mesasInput, setMesasInput] = useState("Mesa-1, Mesa-2, Mesa-3");
+  const [initialPerMesa, setInitialPerMesa] = useState("1000");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -44,12 +46,19 @@ export default function AdminSession() {
       // Give the UI a breath so the spinner renders before PBKDF2 blocks.
       await new Promise((r) => setTimeout(r, 30));
       const kp = deriveKeypairFromPassword(password, salt);
+      const mesas = mesasInput
+        .split(",")
+        .map((m) => m.trim())
+        .filter((m) => m.length > 0);
+      const initial = Math.max(0, Math.floor(Number(initialPerMesa) || 0));
       const newSession: Session = {
         sessionId: crypto.randomUUID(),
         dealerPubKey: bytesToBase64Url(kp.publicKey),
         salt,
         label: label.trim() || "Sesión Casino",
         startedAt: Date.now(),
+        mesas: mesas.length > 0 ? mesas : undefined,
+        initialPerMesa: initial > 0 ? initial : undefined,
       };
       setSession(newSession);
     } catch (e) {
@@ -88,9 +97,29 @@ export default function AdminSession() {
             Cualquiera que escanee este QR podrá unirse. Los talladores, además,
             necesitan la contraseña maestra para poder firmar fichas.
           </p>
+          {(session.mesas?.length ?? 0) > 0 && (
+            <div className="w-full rounded-xl bg-[--color-smoke-800]/60 p-3 text-xs">
+              <p className="font-label text-[--color-cream]/70">
+                MESAS: {session.mesas?.join(" · ")}
+              </p>
+              {session.initialPerMesa && (
+                <p className="mt-1 text-[--color-cream]/60">
+                  Saldo inicial por mesa: ${session.initialPerMesa} ·{" "}
+                  Total/jugador: $
+                  {(session.initialPerMesa * (session.mesas?.length ?? 1)).toLocaleString("es-MX")}
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap justify-center gap-2 pt-2">
+            <Link to="/admin/roster">
+              <Button variant="gold">Alumnos (batch)</Button>
+            </Link>
+            <Link to="/admin/caja">
+              <Button variant="felt">Caja (1 a 1)</Button>
+            </Link>
             <Link to="/admin/overview">
-              <Button variant="gold">Ver estadísticas</Button>
+              <Button variant="felt">Estadísticas</Button>
             </Link>
             <Button
               variant="danger"
@@ -137,6 +166,21 @@ export default function AdminSession() {
           type="password"
           value={confirmPw}
           onChange={(e) => setConfirmPw(e.target.value)}
+        />
+        <Input
+          label="Mesas del casino (separadas por coma)"
+          value={mesasInput}
+          onChange={(e) => setMesasInput(e.target.value)}
+          placeholder="Mesa-1, Mesa-2, Mesa-3"
+          hint="Los talladores usarán estos nombres al iniciar su mesa."
+        />
+        <Input
+          label="Saldo inicial por mesa para cada jugador"
+          type="number"
+          value={initialPerMesa}
+          onChange={(e) => setInitialPerMesa(e.target.value)}
+          placeholder="1000"
+          hint="Recomendado: $1000 por mesa para sesiones de 2–3 horas con apuestas de $100–$500. Con 3 mesas, cada jugador recibe $3000 total."
         />
         {error && <p className="text-sm text-[--color-carmine-400]">{error}</p>}
         <Button onClick={createSession} disabled={busy} block variant="gold">

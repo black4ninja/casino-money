@@ -15,8 +15,10 @@ export type Session = {
   /** ISO label that the teacher chose (e.g., "Casino Primavera 2026"). */
   label: string;
   startedAt: number;
-  /** Optional list of mesa IDs the teacher pre-announces. */
+  /** Declared mesas for the session. Admin Caja distributes initial balance across these. */
   mesas?: string[];
+  /** Default initial balance granted per mesa when admin runs Caja (sugerido $500). */
+  initialPerMesa?: number;
 };
 
 /** Identity a player exposes to a dealer via QR. */
