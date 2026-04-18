@@ -5,8 +5,8 @@ import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
 import { Chip } from "@/components/atoms/Chip";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { DENOMINATIONS } from "@/domain/denominations";
 import type { HistoryEntry, PlayerIdentity, WalletChip } from "@/domain/types";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -138,7 +138,7 @@ export default function PlayerTransfer() {
       >
         <Card className="flex flex-col items-center gap-3 py-6">
           <Badge tone="gold">${submitted.total.toLocaleString("es-MX")}</Badge>
-          <QRCanvas value={submitted.qr} label="QR de transferencia" />
+          <ShareableQR value={submitted.qr} label="QR de transferencia" />
           <p className="text-center text-xs text-[--color-cream]/70">
             Las fichas ya salieron de tu cartera. Si el destinatario no lo
             escanea, el dinero se pierde — igual que un billete físico que cae
@@ -157,7 +157,7 @@ export default function PlayerTransfer() {
     >
       {scanning ? (
         <Card>
-          <QRScanner onDecoded={handleScan} />
+          <ScannerPanel onDecoded={handleScan} />
           {error && (
             <p className="mt-3 text-sm text-[--color-carmine-400]">{error}</p>
           )}

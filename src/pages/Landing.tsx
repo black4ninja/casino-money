@@ -38,6 +38,12 @@ export default function Landing() {
         title="Soy el maestro"
         desc="Crear sesión, distribuir QR y ver estadísticas"
       />
+      <RoleLink
+        to="/ingest"
+        emoji="♡"
+        title="Tengo un código"
+        desc="Pegar un código o enlace sin usar la cámara"
+      />
     </AppLayout>
   );
 }

@@ -5,8 +5,8 @@ import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
 import { Chip } from "@/components/atoms/Chip";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { DENOMINATIONS } from "@/domain/denominations";
 import type { HistoryEntry, WalletChip } from "@/domain/types";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -54,7 +54,7 @@ export default function PlayerPay() {
           <Badge tone="gold">
             ${submitted.total.toLocaleString("es-MX")} — {submitted.dealerId}
           </Badge>
-          <QRCanvas value={submitted.qr} label="QR de pago" />
+          <ShareableQR value={submitted.qr} label="QR de pago" />
           <p className="text-center text-xs text-[--color-cream]/70">
             Cuando el tallador te devuelva el QR de confirmación, escanéalo aquí
             para marcar las fichas como gastadas.
@@ -63,7 +63,7 @@ export default function PlayerPay() {
         <Card tone="night">
           {confirmScan ? (
             <div className="flex flex-col gap-3">
-              <QRScanner
+              <ScannerPanel
                 onDecoded={(text) => {
                   const r = decodeQR(text);
                   if (!r.ok || r.payload.type !== "receipt") {

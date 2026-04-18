@@ -5,8 +5,8 @@ import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { Badge } from "@/components/atoms/Badge";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { deriveKeypairFromPassword, isPasswordAcceptable } from "@/crypto/keys";
 import { bytesToBase64Url } from "@/crypto/encoding";
 import { randomSalt } from "@/crypto/random";
@@ -83,7 +83,7 @@ export default function AdminSession() {
       >
         <Card className="flex flex-col items-center gap-4">
           <Badge tone="gold">{session.label}</Badge>
-          <QRCanvas value={encodeQR(qr)} label="QR de sesión" />
+          <ShareableQR value={encodeQR(qr)} label="QR de sesión" />
           <p className="text-center text-sm text-[--color-cream]/70">
             Cualquiera que escanee este QR podrá unirse. Los talladores, además,
             necesitan la contraseña maestra para poder firmar fichas.
@@ -152,7 +152,7 @@ export default function AdminSession() {
         </p>
         <div className="mt-3">
           {scanning ? (
-            <QRScanner onDecoded={adoptScannedSession} />
+            <ScannerPanel onDecoded={adoptScannedSession} />
           ) : (
             <Button variant="ghost" onClick={() => setScanning(true)}>
               Escanear QR de sesión

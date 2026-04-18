@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useDealerStore } from "@/stores/dealerStore";
 import { totals } from "@/storage/dealer";
@@ -76,7 +76,7 @@ export default function DealerDashboard() {
         </div>
         {showStats && (
           <div className="mt-4 flex justify-center">
-            <QRCanvas value={encodeQR(statsPayload)} label="Stats de mesa" />
+            <ShareableQR value={encodeQR(statsPayload)} label="Stats de mesa" />
           </div>
         )}
       </Card>

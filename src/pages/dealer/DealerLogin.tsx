@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { decodeQR } from "@/qr/codec";
 import { deriveKeypairFromPassword, isPasswordAcceptable } from "@/crypto/keys";
 import { bytesToBase64Url } from "@/crypto/encoding";
@@ -89,7 +89,7 @@ export default function DealerLogin() {
           </div>
         ) : scanning ? (
           <div className="flex flex-col gap-3">
-            <QRScanner onDecoded={handleSessionScan} />
+            <ScannerPanel onDecoded={handleSessionScan} />
             <Button variant="ghost" onClick={() => setScanning(false)}>
               Cancelar
             </Button>

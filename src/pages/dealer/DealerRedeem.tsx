@@ -4,8 +4,8 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
-import { QRScanner } from "@/components/molecules/QRScanner";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
 import { decodeQR, encodeQR } from "@/qr/codec";
 import { QR_VERSION, type ReceiptQR } from "@/qr/schemas";
 import { verifyForRedeem } from "@/domain/chip";
@@ -139,7 +139,7 @@ export default function DealerRedeem() {
             ESCANEA EL QR DE PAGO DEL JUGADOR
           </p>
           <div className="mt-3">
-            <QRScanner onDecoded={handle} />
+            <ScannerPanel onDecoded={handle} />
           </div>
         </Card>
       )}
@@ -151,7 +151,7 @@ export default function DealerRedeem() {
             ${result.total.toLocaleString("es-MX")}
           </span>
           <p className="text-sm">{result.serials.length} ficha(s) cobradas</p>
-          <QRCanvas value={result.receiptQR} label="Muestra el recibo al jugador" />
+          <ShareableQR value={result.receiptQR} label="Muestra el recibo al jugador" />
           <Button variant="felt" onClick={() => setResult({ kind: "scanning" })}>
             Cobrar otra apuesta
           </Button>

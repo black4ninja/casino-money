@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { decodeQR } from "@/qr/codec";
 import type { DealerStatsQR } from "@/qr/schemas";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -88,7 +88,7 @@ export default function AdminOverview() {
       <Card tone="night">
         {scanning ? (
           <div className="flex flex-col gap-3">
-            <QRScanner onDecoded={handleScan} />
+            <ScannerPanel onDecoded={handleScan} />
             <Button variant="ghost" onClick={() => setScanning(false)}>
               Cancelar
             </Button>

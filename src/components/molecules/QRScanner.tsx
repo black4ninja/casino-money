@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 
 type Props = {
   onDecoded: (text: string) => void;
@@ -9,35 +9,48 @@ type Props = {
 
 export function QRScanner({ onDecoded, onError, paused }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
-  const [status, setStatus] = useState<"idle" | "starting" | "running" | "error">(
-    "idle",
+  const onDecodedRef = useRef(onDecoded);
+  const onErrorRef = useRef(onError);
+  const [status, setStatus] = useState<"starting" | "running" | "error">(
+    "starting",
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Keep the latest callbacks in refs so we don't have to restart the camera
+  // every time the parent re-renders (which happens whenever it passes an inline
+  // arrow function — and that was breaking continuous decoding).
+  useEffect(() => {
+    onDecodedRef.current = onDecoded;
+  }, [onDecoded]);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     if (paused) return;
     let cancelled = false;
+    let controls: IScannerControls | null = null;
     const reader = new BrowserQRCodeReader();
     setStatus("starting");
+
     (async () => {
       try {
-        const devices = await BrowserQRCodeReader.listVideoInputDevices();
-        if (devices.length === 0) {
-          throw new Error("No se detectó cámara.");
-        }
-        // Prefer rear-facing camera when available (Android/iOS).
-        const rear = devices.find((d) => /back|rear|environment/i.test(d.label));
-        const deviceId = (rear ?? devices[0]).deviceId;
-        const controls = await reader.decodeFromVideoDevice(
-          deviceId,
+        // Using constraints lets the browser handle permissions and pick the rear
+        // camera on mobile. More reliable than listing devices manually, especially
+        // on iOS where labels are empty until permission is granted.
+        controls = await reader.decodeFromConstraints(
+          {
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          },
           videoRef.current!,
-          (result, err) => {
+          (result) => {
             if (cancelled) return;
             if (result) {
-              onDecoded(result.getText());
-            } else if (err && err.name !== "NotFoundException") {
-              // NotFoundException is the "no QR in frame" signal; ignore it.
+              onDecodedRef.current(result.getText());
             }
           },
         );
@@ -45,21 +58,20 @@ export function QRScanner({ onDecoded, onError, paused }: Props) {
           controls.stop();
           return;
         }
-        controlsRef.current = controls;
         setStatus("running");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Error desconocido";
+        const msg = err instanceof Error ? err.message : "Error de cámara";
         setErrorMsg(msg);
         setStatus("error");
-        onError?.(msg);
+        onErrorRef.current?.(msg);
       }
     })();
+
     return () => {
       cancelled = true;
-      controlsRef.current?.stop();
-      controlsRef.current = null;
+      controls?.stop();
     };
-  }, [onDecoded, onError, paused]);
+  }, [paused]);
 
   return (
     <div className="relative overflow-hidden rounded-3xl border-2 border-[--color-gold-500]/60 bg-black">
@@ -69,17 +81,17 @@ export function QRScanner({ onDecoded, onError, paused }: Props) {
           className="h-full w-full object-cover"
           playsInline
           muted
+          autoPlay
         />
-        {/* Overlay frame */}
         <div className="pointer-events-none absolute inset-4 rounded-2xl border-2 border-[--color-gold-400]/80">
           <div className="scanline absolute inset-0 overflow-hidden rounded-2xl" />
         </div>
       </div>
       <div className="bg-[--color-smoke-800] px-4 py-2 text-center font-label text-xs text-[--color-cream]/80">
-        {status === "starting" && "Pidiendo permiso de cámara…"}
-        {status === "running" && "Apunta al QR"}
-        {status === "error" && (errorMsg ?? "Error con la cámara")}
         {paused && "Pausado"}
+        {!paused && status === "starting" && "Pidiendo permiso de cámara…"}
+        {!paused && status === "running" && "Apunta al QR"}
+        {!paused && status === "error" && (errorMsg ?? "Error con la cámara")}
       </div>
     </div>
   );

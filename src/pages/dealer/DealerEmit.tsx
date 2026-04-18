@@ -5,8 +5,8 @@ import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
 import { Chip } from "@/components/atoms/Chip";
-import { QRCanvas } from "@/components/atoms/QRCanvas";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ShareableQR } from "@/components/atoms/ShareableQR";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { DENOMINATIONS, type Denomination } from "@/domain/denominations";
 import type { Chip as ChipType, PlayerIdentity } from "@/domain/types";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -112,7 +112,7 @@ export default function DealerEmit() {
       >
         <Card className="flex flex-col items-center gap-3 py-6">
           <Badge tone="gold">${total.toLocaleString("es-MX")}</Badge>
-          <QRCanvas value={emitted} label="QR para el jugador" />
+          <ShareableQR value={emitted} label="QR para el jugador" />
           <p className="text-center text-xs text-[--color-cream]/70">
             El jugador debe escanear este QR para recibir las fichas. Las fichas
             quedan atadas a esta mesa ({dealerId}).
@@ -137,7 +137,7 @@ export default function DealerEmit() {
             ESCANEA EL QR DE IDENTIDAD DEL JUGADOR
           </p>
           <div className="mt-3">
-            <QRScanner onDecoded={handleScan} />
+            <ScannerPanel onDecoded={handleScan} />
           </div>
           {error && (
             <p className="mt-3 text-sm text-[--color-carmine-400]">{error}</p>

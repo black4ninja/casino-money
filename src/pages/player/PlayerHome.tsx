@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { decodeQR } from "@/qr/codec";
 import { useSessionStore } from "@/stores/sessionStore";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -77,7 +77,7 @@ export default function PlayerHome() {
           </div>
         ) : scanning ? (
           <div className="flex flex-col gap-3">
-            <QRScanner onDecoded={handleSessionScan} />
+            <ScannerPanel onDecoded={handleSessionScan} />
             <Button variant="ghost" onClick={() => setScanning(false)}>
               Cancelar
             </Button>

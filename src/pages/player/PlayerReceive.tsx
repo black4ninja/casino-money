@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
-import { QRScanner } from "@/components/molecules/QRScanner";
+import { ScannerPanel } from "@/components/molecules/ScannerPanel";
 import { decodeQR } from "@/qr/codec";
 import { base64UrlToBytes } from "@/crypto/encoding";
 import { verifyChipSignature, verifyWalletChip } from "@/domain/chip";
@@ -143,7 +143,7 @@ export default function PlayerReceive() {
       subtitle="Escanea el QR del tallador o de otro jugador"
       back={{ to: "/player/wallet", label: "Cartera" }}
     >
-      {status.kind === "scanning" && <QRScanner onDecoded={handle} />}
+      {status.kind === "scanning" && <ScannerPanel onDecoded={handle} />}
 
       {status.kind === "ok" && (
         <Card>

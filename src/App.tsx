@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Landing from "./pages/Landing";
+import Ingest from "./pages/Ingest";
 import AdminSession from "./pages/admin/AdminSession";
 import AdminOverview from "./pages/admin/AdminOverview";
 import PlayerHome from "./pages/player/PlayerHome";
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/ingest" element={<Ingest />} />
 
       <Route path="/admin" element={<AdminSession />} />
       <Route path="/admin/overview" element={<AdminOverview />} />
