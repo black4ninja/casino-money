@@ -78,15 +78,41 @@ export default function Ruleta() {
       : "Ruleta en reposo, toca el centro para girar";
 
   return (
-    <div className="flex min-h-full w-full flex-col px-4 py-6 sm:px-6 md:py-8 lg:px-10">
-      <header className="mb-6 flex items-center gap-4 md:mb-8">
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: "2.5rem",
+        boxSizing: "border-box",
+      }}
+    >
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          marginBottom: "2rem",
+        }}
+      >
         <Link
           to="/juegos"
-          className="font-label rounded-full border border-[--color-gold-500]/40 px-3 py-1 text-xs text-[--color-cream]/80 hover:bg-white/5"
+          aria-label="Volver"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "2.5rem",
+            height: "2.5rem",
+            flexShrink: 0,
+            borderRadius: "9999px",
+            border: "1px solid rgba(212, 175, 55, 0.4)",
+            color: "rgba(245, 230, 202, 0.8)",
+            fontSize: "1.125rem",
+            textDecoration: "none",
+          }}
         >
-          ← Volver
+          ←
         </Link>
-        <div className="flex-1 text-center">
+        <div style={{ flex: 1, textAlign: "center" }}>
           <h1 className="gold-shine font-display text-3xl leading-none md:text-4xl">
             Ruleta de Patrones
           </h1>
@@ -94,12 +120,19 @@ export default function Ruleta() {
             Toca el centro para girar
           </p>
         </div>
-        {/* Spacer to keep the title visually centered between back button and
-            the right edge. Width roughly matches the back button. */}
-        <span aria-hidden className="w-[78px] shrink-0" />
+        <span aria-hidden style={{ width: "2.5rem", height: "2.5rem", flexShrink: 0 }} />
       </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-8">
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "calc(100vh - 12rem)",
+          gap: "2rem",
+        }}
+      >
         <RouletteWheel
           rotation={rotation}
           instant={reduced}

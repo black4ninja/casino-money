@@ -1,9 +1,46 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   PATTERNS,
   PATTERN_COUNT,
   type DesignPattern,
 } from "@/domain/designPatterns";
+
+/**
+ * Evaluate a cubic-bezier easing function `(0, 0) → (p1) → (p2) → (1, 1)`
+ * at progress `x` ∈ [0, 1]. Used to simulate the wheel's CSS transition in JS
+ * so we can drive the pointer "flap" animation in sync with each visible
+ * slot-boundary crossing (without reading DOM on every frame).
+ */
+function makeCubicBezier(
+  p1x: number,
+  p1y: number,
+  p2x: number,
+  p2y: number,
+): (x: number) => number {
+  const sampleCurveX = (t: number) =>
+    3 * (1 - t) * (1 - t) * t * p1x +
+    3 * (1 - t) * t * t * p2x +
+    t * t * t;
+  const sampleCurveY = (t: number) =>
+    3 * (1 - t) * (1 - t) * t * p1y +
+    3 * (1 - t) * t * t * p2y +
+    t * t * t;
+  return (x: number) => {
+    let lo = 0;
+    let hi = 1;
+    let t = x;
+    for (let i = 0; i < 12; i++) {
+      t = (lo + hi) / 2;
+      const sx = sampleCurveX(t);
+      if (sx < x) lo = t;
+      else hi = t;
+    }
+    return sampleCurveY(t);
+  };
+}
+
+// Matches the `transition: cubic-bezier(0.15, 0.82, 0.25, 0.99)` on the wheel.
+const SPIN_EASE = makeCubicBezier(0.15, 0.82, 0.25, 0.99);
 
 const SLOT_ANGLE = 360 / PATTERN_COUNT;
 const R_INNER = 82;
@@ -69,6 +106,68 @@ export function RouletteWheel({
   ariaLabel,
 }: Props) {
   const [pressed, setPressed] = useState(false);
+
+  // Pointer flap — mimics a wheel-of-fortune flapper. Each slot-boundary
+  // crossing during the spin causes a brief angular "kick", then CSS spring
+  // transition snaps it back to rest.
+  const [pointerTilt, setPointerTilt] = useState(0);
+  const previousRotationRef = useRef(0);
+  const tiltResetTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const startRotation = previousRotationRef.current;
+    const endRotation = rotation;
+    previousRotationRef.current = endRotation;
+    if (instant || startRotation === endRotation) return;
+
+    const startTime = performance.now();
+    const direction = endRotation >= startRotation ? 1 : -1;
+    let raf = 0;
+    let lastCrossings = Math.floor(Math.abs(startRotation) / (360 / PATTERN_COUNT));
+    let lastTickAt = 0;
+    const MIN_GAP_MS = 70; // throttle so the tilt animation has time to resolve
+
+    const loop = () => {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(1, elapsed / durationMs);
+      const eased = SPIN_EASE(t);
+      const currentAngle =
+        startRotation + (endRotation - startRotation) * eased;
+      const crossings = Math.floor(
+        Math.abs(currentAngle) / (360 / PATTERN_COUNT),
+      );
+      const now = performance.now();
+      if (crossings > lastCrossings && now - lastTickAt > MIN_GAP_MS) {
+        lastTickAt = now;
+        // Flap kicks opposite to the wheel travel direction: wheel going CW
+        // (positive delta) pushes the pointer's tip right (+angle in SVG).
+        setPointerTilt(direction * 14);
+        if (tiltResetTimeoutRef.current != null) {
+          window.clearTimeout(tiltResetTimeoutRef.current);
+        }
+        tiltResetTimeoutRef.current = window.setTimeout(() => {
+          setPointerTilt(0);
+          tiltResetTimeoutRef.current = null;
+        }, 45);
+      }
+      lastCrossings = crossings;
+      if (t < 1) {
+        raf = requestAnimationFrame(loop);
+      } else {
+        setPointerTilt(0);
+      }
+    };
+
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (tiltResetTimeoutRef.current != null) {
+        window.clearTimeout(tiltResetTimeoutRef.current);
+        tiltResetTimeoutRef.current = null;
+      }
+      setPointerTilt(0);
+    };
+  }, [rotation, instant, durationMs]);
   // SVG rotation quirk: we need `transform-box: fill-box` + `transform-origin:
   // center` so the rotation pivots on the wheel's actual center (which in our
   // SVG happens to be the (0,0) coordinate, but CSS transforms without these
@@ -317,16 +416,28 @@ export function RouletteWheel({
           );
         })}
 
-        {/* Pointer (static, at 12 o'clock). Sits over the rim so it looks
-            like it catches the wheel as it passes underneath. */}
-        <g transform={`translate(0 ${-R_RIM_OUT + 6})`} filter="url(#rw-bevel)">
-          <polygon
-            points="-14,-16 14,-16 0,14"
-            fill="url(#rw-grad-rim)"
-            stroke="#8a6a10"
-            strokeWidth="1.2"
-          />
-          <circle cx="0" cy="-11" r="3" fill="#5a4408" />
+        {/* Pointer at 12 o'clock — split into a static "mount" translate and
+            an inner rotating flapper. Pegs passing underneath flick the flap;
+            CSS spring transition snaps it back after each hit. */}
+        <g transform={`translate(0 ${-R_RIM_OUT + 6})`}>
+          <g
+            style={{
+              transform: `rotate(${pointerTilt}deg)`,
+              transformOrigin: "50% 0%",
+              transformBox: "fill-box",
+              transition:
+                "transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+            filter="url(#rw-bevel)"
+          >
+            <polygon
+              points="-14,-16 14,-16 0,14"
+              fill="url(#rw-grad-rim)"
+              stroke="#8a6a10"
+              strokeWidth="1.2"
+            />
+            <circle cx="0" cy="-11" r="3" fill="#5a4408" />
+          </g>
         </g>
       </svg>
     </div>
