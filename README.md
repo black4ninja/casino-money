@@ -1,6 +1,6 @@
 # Casino Money
 
-Monedero virtual con fichas criptográficamente firmadas para dinámicas de casino en el aula. App 100% estática, sin backend, desplegable en GitHub Pages.
+Monedero virtual con fichas criptográficamente firmadas para dinámicas de casino en el aula. Frontend React estático + backend Express/Parse Server opcional para sincronización server-side.
 
 ## Cómo funciona
 
@@ -27,35 +27,95 @@ Monedero virtual con fichas criptográficamente firmadas para dinámicas de casi
 
 ## Desarrollo local
 
+> Este proyecto usa **yarn** (classic v1). No usar `npm`.
+
+Crea tu `.env` (copia de `.env.example`) con las credenciales de Parse y MongoDB. Desde la raíz del repo:
+
 ```bash
-npm install
-npm run dev        # http://localhost:5173
-npm test           # 32+ tests (crypto, domain, QR)
-npm run typecheck
-npm run build      # bundle estático en dist/
+yarn install:all   # instala raíz, backend/, frontend/
+yarn dev           # arranca backend en :1448 y frontend en :8484 (concurrente)
 ```
 
-## Despliegue en GitHub Pages
+Los logs vienen etiquetados con timestamp y color por servicio:
 
-El workflow `.github/workflows/deploy.yml` publica automáticamente la rama `main` en Pages. Habilita Pages en Settings → Pages → Source: **GitHub Actions**. El `VITE_BASE` se calcula a partir del nombre del repo.
+```
+ 15:47:00 FRONTEND    ➜  Local: http://localhost:8484/
+ 15:47:03 BACKEND    [backend] CasinoGame listening on http://localhost:1448
+```
+
+O por separado:
+
+```bash
+yarn dev:backend    # sólo backend → http://localhost:1448
+yarn dev:frontend   # sólo frontend → http://localhost:8484
+```
+
+Tests y checks:
+
+```bash
+yarn test           # tests del frontend (79 tests: crypto, domain, QR, e2e)
+yarn typecheck      # TS check en backend y frontend
+yarn build          # build de ambos
+```
 
 ## Stack
 
+### Frontend (`frontend/`)
 - React 18 + TypeScript + Vite + HashRouter
 - Tailwind v4 con tema casino custom
 - `@noble/ed25519` + `@noble/hashes` (firmas + PBKDF2)
 - `qrcode` + `@zxing/browser` (QR encode/decode + cámara)
+- `parse` (JS SDK) para conectar al backend
 - Zustand para estado + `localStorage` versionado
+- Atomic design: `atoms/`, `molecules/`, `organisms/`, `templates/`, `pages/`
+
+### Backend (`backend/`)
+- Node 20 + TypeScript (ESM)
+- Express 4 + Parse Server 7 (MongoDB Atlas)
+- Arquitectura: Clean Architecture + MVC
+  - `domain/` — entidades puras
+  - `application/` — casos de uso
+  - `infrastructure/` — adaptadores (Parse, Mongo)
+  - `interfaces/http/` — controllers, routes, middlewares
+- REST API montada en `/api/v1`, Parse en `/parse`
 
 ## Estructura
 
 ```
-src/
-├── crypto/        # Ed25519 + PBKDF2 + canonical JSON
-├── domain/        # Chip, Endorsement, verificación pura
-├── storage/       # localStorage con esquema versionado
-├── qr/            # schemas + codec
-├── stores/        # Zustand stores por rol
-├── components/    # atoms, molecules, templates (atomic design)
-└── pages/         # Landing, player/, dealer/, admin/
+casino-money/
+├── .env                      # vars compartidas (gitignored)
+├── .env.example
+├── package.json              # workspace root (concurrently)
+├── backend/
+│   ├── src/
+│   │   ├── server.ts
+│   │   ├── app.ts
+│   │   ├── config/env.ts
+│   │   ├── domain/entities/
+│   │   ├── application/use-cases/
+│   │   ├── infrastructure/parse/
+│   │   └── interfaces/http/
+│   │       ├── controllers/
+│   │       ├── routes/
+│   │       └── middlewares/
+│   ├── package.json
+│   └── tsconfig.json
+└── frontend/
+    ├── src/
+    │   ├── crypto/           # Ed25519 + PBKDF2 + canonical JSON
+    │   ├── domain/           # Chip, Endorsement, verificación pura
+    │   ├── storage/          # localStorage con esquema versionado
+    │   ├── qr/               # schemas + codec
+    │   ├── stores/           # Zustand stores por rol
+    │   ├── lib/              # parse SDK init, utilidades
+    │   ├── hooks/            # React hooks (useSystemStatus, …)
+    │   ├── components/
+    │   │   ├── atoms/        # Badge, Button, Card, Chip, Input, NeonBulb, QRCanvas
+    │   │   ├── molecules/    # ChipStack, ShareableQR
+    │   │   ├── organisms/    # CasinoSign, QRScanner, ScannerPanel
+    │   │   └── templates/    # AppLayout
+    │   └── pages/            # Landing, Ingest, Simulator, admin/, dealer/, player/
+    ├── public/
+    ├── scripts/              # harness de verificación end-to-end
+    └── package.json
 ```
