@@ -23,12 +23,18 @@ export function HandbookFab({ onClick }: Props) {
         "drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]",
       ].join(" ")}
     >
-      <svg viewBox="0 0 100 100" width={64} height={64} aria-hidden>
+      <svg
+        viewBox="0 0 100 100"
+        width={64}
+        height={64}
+        aria-hidden
+        className="animate-chip-attention"
+      >
         <defs>
           <radialGradient id="handbook-chip-grad" cx="50%" cy="38%" r="58%">
-            <stop offset="0%" stopColor="#1b4f3a" />
-            <stop offset="60%" stopColor="#0f3a2a" />
-            <stop offset="100%" stopColor="#072018" />
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="60%" stopColor="#1d4ed8" />
+            <stop offset="100%" stopColor="#0f2a7a" />
           </radialGradient>
           <radialGradient id="handbook-center-grad" cx="50%" cy="40%" r="60%">
             <stop offset="0%" stopColor="#f0d37d" />

@@ -173,6 +173,39 @@ button {
   animation: chip-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/*
+ * Periodic attention spin for the handbook FAB: the chip sits still most of
+ * the cycle, winds up slightly, then rips through a full rotation and settles
+ * — evokes a poker chip being spun on a table. Respects
+ * prefers-reduced-motion: users with the setting off get a static chip.
+ */
+@keyframes chip-attention-spin {
+  0%, 70% {
+    transform: rotate(0deg);
+  }
+  74% {
+    transform: rotate(-18deg);
+  }
+  92% {
+    transform: rotate(345deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-chip-attention {
+  animation: chip-attention-spin 7s cubic-bezier(0.25, 0.9, 0.3, 1.1) infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-chip-attention {
+    animation: none;
+  }
+}
+
 @keyframes gold-shine {
   0% {
     background-position: -200% 0;
