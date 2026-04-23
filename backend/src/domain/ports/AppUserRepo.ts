@@ -6,11 +6,14 @@ export type CreateAppUserInput = {
   passwordHash: string;
   role: Role;
   fullName: string | null;
+  departamento: string | null;
 };
 
 export type UpdateAppUserInput = {
   /** If provided, overwrites fullName (empty string → null). */
   fullName?: string | null;
+  /** If provided, overwrites departamento (empty string → null). Player-only. */
+  departamento?: string | null;
   /** If provided, replaces the stored password hash. */
   passwordHash?: string;
 };

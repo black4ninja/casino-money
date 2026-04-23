@@ -17,6 +17,7 @@ export async function bootstrapInitialMaster(repo: AppUserRepo): Promise<void> {
     passwordHash,
     role: "master",
     fullName: SEED_FULL_NAME,
+    departamento: null,
   });
   console.log(
     `[seed] initial master created: ${user.matricula} (${user.id}) — login with password from plan`,

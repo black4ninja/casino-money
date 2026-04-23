@@ -11,6 +11,9 @@ export function userRoutes(
   router.use(requireAuthMiddleware, requireMasterMiddleware);
   router.get("/:collection", ctrl.listByCollection);
   router.post("/:collection", ctrl.createInCollection);
+  // Bulk endpoint must be registered before the /:id routes so Express doesn't
+  // treat "bulk" as an id.
+  router.post("/:collection/bulk", ctrl.bulkImportPlayers);
   router.patch("/:collection/:id", ctrl.updateInCollection);
   router.post("/:collection/:id/archive", ctrl.archiveInCollection);
   router.post("/:collection/:id/unarchive", ctrl.unarchiveInCollection);

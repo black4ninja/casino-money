@@ -7,6 +7,8 @@ export type UpdateUserInput = {
   userId: string;
   /** If provided, replaces the name (empty string → cleared). */
   fullName?: string | null;
+  /** If provided, replaces the departamento (empty string → cleared). Player-only. */
+  departamento?: string | null;
   /** If provided (non-empty), rotates the password. Must be ≥8 chars. */
   password?: string;
 };
@@ -18,9 +20,16 @@ export class UpdateUserUseCase {
     const user = await this.users.findById(input.userId);
     if (!user) throw AuthError.tokenInvalid();
 
-    const patch: { fullName?: string | null; passwordHash?: string } = {};
+    const patch: {
+      fullName?: string | null;
+      departamento?: string | null;
+      passwordHash?: string;
+    } = {};
     if (input.fullName !== undefined) {
       patch.fullName = input.fullName;
+    }
+    if (input.departamento !== undefined && user.role === "player") {
+      patch.departamento = input.departamento;
     }
     if (input.password !== undefined && input.password.length > 0) {
       if (input.password.length < 8) {

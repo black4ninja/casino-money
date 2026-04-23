@@ -20,6 +20,7 @@ function toEntity(obj: Parse.Object): AppUser {
     matricula: obj.get("matricula"),
     role,
     fullName: obj.get("fullName") ?? null,
+    departamento: obj.get("departamento") ?? null,
     active: obj.get("active") ?? true,
     // Default to true for legacy rows that predate the flag.
     exists: obj.get("exists") ?? true,
@@ -84,6 +85,7 @@ export class ParseAppUserRepo implements AppUserRepo {
     obj.set("passwordHash", input.passwordHash);
     obj.set("role", input.role);
     obj.set("fullName", input.fullName);
+    obj.set("departamento", input.departamento);
     obj.set("active", true);
     obj.set("exists", true);
     await obj.save(null, { useMasterKey: true });
@@ -104,6 +106,10 @@ export class ParseAppUserRepo implements AppUserRepo {
     if (patch.fullName !== undefined) {
       const trimmed = patch.fullName?.trim();
       obj.set("fullName", trimmed ? trimmed : null);
+    }
+    if (patch.departamento !== undefined) {
+      const trimmed = patch.departamento?.trim();
+      obj.set("departamento", trimmed ? trimmed : null);
     }
     if (patch.passwordHash !== undefined) {
       obj.set("passwordHash", patch.passwordHash);

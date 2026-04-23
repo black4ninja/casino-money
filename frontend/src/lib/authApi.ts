@@ -111,7 +111,14 @@ export async function apiListUsers(
 export async function apiCreateUser(
   accessToken: string,
   collection: UserCollection,
-  data: { matricula: string; password: string; fullName?: string },
+  data: {
+    matricula: string;
+    /** Required for master/dealer; ignored for players (they don't use one). */
+    password?: string;
+    fullName?: string;
+    /** Player-only. Ignored by the backend for staff. */
+    departamento?: string;
+  },
 ): Promise<{ user: AuthUser }> {
   const res = await fetch(`${BASE}/users/${collection}`, {
     method: "POST",
@@ -129,7 +136,11 @@ export async function apiUpdateUser(
   accessToken: string,
   collection: UserCollection,
   id: string,
-  data: { fullName?: string | null; password?: string },
+  data: {
+    fullName?: string | null;
+    departamento?: string | null;
+    password?: string;
+  },
 ): Promise<{ user: AuthUser }> {
   const res = await fetch(`${BASE}/users/${collection}/${id}`, {
     method: "PATCH",
@@ -138,6 +149,48 @@ export async function apiUpdateUser(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(data),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export type BulkImportPlayerRow = {
+  matricula: string;
+  fullName?: string | null;
+  departamento?: string | null;
+};
+
+export type BulkImportResult =
+  | { row: number; matricula: string; status: "created"; userId: string }
+  | {
+      row: number;
+      matricula: string;
+      status: "error";
+      code: string;
+      message: string;
+    };
+
+export type BulkImportResponse = {
+  results: BulkImportResult[];
+  summary: { total: number; created: number; failed: number };
+};
+
+/**
+ * CSV bulk import — players collection only. The backend attempts each row
+ * independently and returns a per-row report; a partial failure does not
+ * abort the whole batch.
+ */
+export async function apiBulkImportPlayers(
+  accessToken: string,
+  players: BulkImportPlayerRow[],
+): Promise<BulkImportResponse> {
+  const res = await fetch(`${BASE}/users/players/bulk`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ players }),
   });
   if (!res.ok) throw await parseError(res);
   return res.json();

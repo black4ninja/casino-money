@@ -10,6 +10,8 @@
     "typecheck": "yarn --cwd backend typecheck && yarn --cwd frontend typecheck",
     "test": "yarn --cwd frontend test",
     "build": "yarn --cwd backend build && yarn --cwd frontend build",
+    "prod": "yarn build && yarn prod:start",
+    "prod:start": "NODE_ENV=production yarn --cwd backend start",
     "install:all": "yarn install && yarn --cwd backend install && yarn --cwd frontend install"
   },
   "devDependencies": {

@@ -1,5 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve as resolvePath, join as joinPath } from "node:path";
+import { existsSync } from "node:fs";
 import type { Env } from "./config/env.js";
 import { buildParseServer } from "./infrastructure/parse/parseServer.js";
 import { initParseClient } from "./infrastructure/parse/parseClient.js";
@@ -28,6 +31,7 @@ import { ListUsersUseCase } from "./application/use-cases/ListUsers.js";
 import { UpdateUserUseCase } from "./application/use-cases/UpdateUser.js";
 import { SetUserActiveUseCase } from "./application/use-cases/SetUserActive.js";
 import { DeleteUserUseCase } from "./application/use-cases/DeleteUser.js";
+import { BulkCreatePlayersUseCase } from "./application/use-cases/BulkCreatePlayers.js";
 import { LookupMatriculaUseCase } from "./application/use-cases/LookupMatricula.js";
 import { CreateCasinoUseCase } from "./application/use-cases/CreateCasino.js";
 import { ListCasinosUseCase } from "./application/use-cases/ListCasinos.js";
@@ -104,6 +108,7 @@ export async function createApp(env: Env): Promise<Express> {
   const updateUser = new UpdateUserUseCase(userRepo);
   const setUserActive = new SetUserActiveUseCase(userRepo, sessionRepo);
   const deleteUser = new DeleteUserUseCase(userRepo, sessionRepo);
+  const bulkCreatePlayers = new BulkCreatePlayersUseCase(createUser);
   const lookupMatricula = new LookupMatriculaUseCase(userRepo);
   const createCasino = new CreateCasinoUseCase(casinoRepo);
   const listCasinos = new ListCasinosUseCase(casinoRepo);
@@ -126,6 +131,7 @@ export async function createApp(env: Env): Promise<Express> {
     updateUser,
     setUserActive,
     deleteUser,
+    bulkCreatePlayers,
   );
   const casinoController = new CasinoController(
     createCasino,
@@ -161,6 +167,30 @@ export async function createApp(env: Env): Promise<Express> {
     "/api/v1/mesas/:mesaId/spins",
     rouletteSpinRoutes(spinController, requireAuthMw),
   );
+
+  // Unified deployment: serve the built SPA from the same origin as the API.
+  // Static assets get direct hits; every other GET falls back to index.html so
+  // React Router (BrowserRouter) can handle the client-side route.
+  if (env.SERVE_FRONTEND) {
+    const moduleDir = dirname(fileURLToPath(import.meta.url));
+    const frontendDist = resolvePath(moduleDir, "../../frontend/dist");
+    if (!existsSync(joinPath(frontendDist, "index.html"))) {
+      console.warn(
+        `[static] SERVE_FRONTEND is on but frontend build is missing at ${frontendDist}. ` +
+          `Run \`yarn build\` (or \`yarn prod\`) before starting.`,
+      );
+    } else {
+      console.log(`[static] Serving SPA from ${frontendDist}`);
+      app.use(express.static(frontendDist, { index: false }));
+      app.use((req: Request, res: Response, next: NextFunction) => {
+        if (req.method !== "GET" && req.method !== "HEAD") return next();
+        if (req.path.startsWith("/api/") || req.path.startsWith("/parse")) {
+          return next();
+        }
+        res.sendFile(joinPath(frontendDist, "index.html"));
+      });
+    }
+  }
 
   app.use(errorHandler);
 

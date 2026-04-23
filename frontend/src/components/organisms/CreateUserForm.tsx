@@ -6,10 +6,13 @@ import { Card } from "../atoms/Card";
 type Props = {
   /** "maestro" | "tallador" | "jugador" — used in copy. */
   roleLabel: string;
+  /** Discriminator for role-specific fields (departamento, password). */
+  isPlayer: boolean;
   onSubmit: (data: {
     matricula: string;
     password: string;
     fullName: string;
+    departamento: string;
   }) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -18,6 +21,7 @@ type Props = {
 
 export function CreateUserForm({
   roleLabel,
+  isPlayer,
   onSubmit,
   onCancel,
   loading,
@@ -26,6 +30,7 @@ export function CreateUserForm({
   const [matricula, setMatricula] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [departamento, setDepartamento] = useState("");
 
   async function handle(e: FormEvent) {
     e.preventDefault();
@@ -34,8 +39,13 @@ export function CreateUserForm({
       matricula: matricula.trim(),
       password,
       fullName: fullName.trim(),
+      departamento: departamento.trim(),
     });
   }
+
+  // Players sign in without a password (by design), so the staff-only
+  // 8-char rule shouldn't block player creation.
+  const passwordInvalid = !isPlayer && password.length < 8;
 
   return (
     <Card tone="night">
@@ -53,19 +63,29 @@ export function CreateUserForm({
         />
         <Input
           label="Nombre completo"
-          placeholder="Opcional"
+          placeholder={isPlayer ? "Opcional" : "Opcional"}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
-        <Input
-          label="Contraseña"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          hint="Mínimo 8 caracteres"
-        />
+        {isPlayer && (
+          <Input
+            label="Departamento"
+            placeholder="Ej. ITC, IMT"
+            value={departamento}
+            onChange={(e) => setDepartamento(e.target.value)}
+          />
+        )}
+        {!isPlayer && (
+          <Input
+            label="Contraseña"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            hint="Mínimo 8 caracteres"
+          />
+        )}
         {error && (
           <p
             className="font-label text-xs tracking-wider text-[--color-carmine-400]"
@@ -78,7 +98,7 @@ export function CreateUserForm({
           <Button
             type="submit"
             variant="primary"
-            disabled={loading || !matricula || password.length < 8}
+            disabled={loading || !matricula || passwordInvalid}
           >
             {loading ? "Creando…" : `Crear ${roleLabel}`}
           </Button>

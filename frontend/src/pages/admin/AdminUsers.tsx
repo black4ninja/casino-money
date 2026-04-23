@@ -8,20 +8,24 @@ import {
 } from "@/components/organisms/DataTable";
 import { CreateUserForm } from "@/components/organisms/CreateUserForm";
 import { EditUserForm } from "@/components/organisms/EditUserForm";
+import { ImportPlayersModal } from "@/components/organisms/ImportPlayersModal";
 import { Tabs, type TabItem } from "@/components/molecules/Tabs";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { FormModal } from "@/components/molecules/FormModal";
 import { useAuthStore } from "@/stores/authStore";
 import {
   apiArchiveUser,
+  apiBulkImportPlayers,
   apiCreateUser,
   apiDeleteUser,
   apiListUsers,
   apiUnarchiveUser,
   apiUpdateUser,
   type ApiError,
+  type BulkImportPlayerRow,
   type UserCollection,
 } from "@/lib/authApi";
+import { downloadPlayerCsvTemplate } from "@/lib/playerCsv";
 import type { AuthUser } from "@/storage/auth";
 
 type RoleTabConfig = {
@@ -86,8 +90,11 @@ export default function AdminUsers() {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
+  const [showImport, setShowImport] = useState(false);
+
   const activeTab =
     TABS.find((t) => t.collection === activeCollection) ?? TABS[0];
+  const isPlayersTab = activeCollection === "players";
 
   /** Wraps an authenticated API call with one-shot refresh-on-401 retry. */
   const withAuth = useCallback(
@@ -131,6 +138,7 @@ export default function AdminUsers() {
   function handleChangeTab(collection: UserCollection) {
     setActiveCollection(collection);
     setShowForm(false);
+    setShowImport(false);
     setCreateError(null);
     setLoadError(null);
     setDialog({ kind: "none" });
@@ -141,6 +149,7 @@ export default function AdminUsers() {
     matricula: string;
     password: string;
     fullName: string;
+    departamento: string;
   }) {
     setCreateLoading(true);
     setCreateError(null);
@@ -148,8 +157,9 @@ export default function AdminUsers() {
       await withAuth((t) =>
         apiCreateUser(t, activeCollection, {
           matricula: data.matricula,
-          password: data.password,
+          password: isPlayersTab ? undefined : data.password,
           fullName: data.fullName || undefined,
+          departamento: isPlayersTab ? data.departamento || undefined : undefined,
         }),
       );
       setShowForm(false);
@@ -166,6 +176,16 @@ export default function AdminUsers() {
     }
   }
 
+  async function handleBulkImport(rows: BulkImportPlayerRow[]) {
+    return withAuth((t) => apiBulkImportPlayers(t, rows));
+  }
+
+  async function closeImport() {
+    setShowImport(false);
+    // Refresh — imports may have created rows we need to reflect.
+    await load(activeCollection);
+  }
+
   function closeDialog() {
     if (dialogLoading) return;
     setDialog({ kind: "none" });
@@ -174,7 +194,11 @@ export default function AdminUsers() {
 
   async function handleEdit(
     user: AuthUser,
-    data: { fullName: string | null; password?: string },
+    data: {
+      fullName: string | null;
+      departamento?: string | null;
+      password?: string;
+    },
   ) {
     setDialogLoading(true);
     setDialogError(null);
@@ -182,6 +206,7 @@ export default function AdminUsers() {
       await withAuth((t) =>
         apiUpdateUser(t, activeCollection, user.id, {
           fullName: data.fullName,
+          departamento: data.departamento,
           password: data.password,
         }),
       );
@@ -260,15 +285,39 @@ export default function AdminUsers() {
         </span>
       ),
     },
-    {
-      key: "role",
-      header: "Rol",
-      cell: (u) => {
-        const tone =
-          u.role === "master" ? "gold" : u.role === "dealer" ? "info" : "felt";
-        return <Badge tone={tone}>{u.role}</Badge>;
-      },
-    },
+    ...(isPlayersTab
+      ? ([
+          {
+            key: "departamento",
+            header: "Departamento",
+            cell: (u: AuthUser) =>
+              u.departamento ? (
+                <span className="text-[--color-cream]">{u.departamento}</span>
+              ) : (
+                <span className="text-[--color-cream]/40">—</span>
+              ),
+          },
+        ] as DataTableColumn<AuthUser>[])
+      : []),
+    // The "Rol" column is redundant on the players tab — the tab itself
+    // already tells the user which role they're looking at.
+    ...(!isPlayersTab
+      ? ([
+          {
+            key: "role",
+            header: "Rol",
+            cell: (u: AuthUser) => {
+              const tone =
+                u.role === "master"
+                  ? "gold"
+                  : u.role === "dealer"
+                    ? "info"
+                    : "felt";
+              return <Badge tone={tone}>{u.role}</Badge>;
+            },
+          },
+        ] as DataTableColumn<AuthUser>[])
+      : []),
     {
       key: "active",
       header: "Estado",
@@ -383,16 +432,43 @@ export default function AdminUsers() {
         <DataTable<AuthUser>
           data={users}
           columns={columns}
-          searchKeys={["matricula", "fullName"]}
-          searchPlaceholder="Buscar por matrícula o nombre"
+          searchKeys={
+            isPlayersTab
+              ? ["matricula", "fullName", "departamento"]
+              : ["matricula", "fullName"]
+          }
+          searchPlaceholder={
+            isPlayersTab
+              ? "Buscar por matrícula, nombre o departamento"
+              : "Buscar por matrícula o nombre"
+          }
           loading={loading}
           emptyMessage={activeTab.emptyMessage}
           getRowId={(u) => u.id}
           pageSize={10}
           toolbar={
-            <Button variant="primary" onClick={() => setShowForm(true)}>
-              + Nuevo {activeTab.roleLabel}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" onClick={() => setShowForm(true)}>
+                + Nuevo {activeTab.roleLabel}
+              </Button>
+              {isPlayersTab && (
+                <>
+                  <Button
+                    variant="info"
+                    onClick={() => setShowImport(true)}
+                  >
+                    Importar CSV
+                  </Button>
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    onClick={() => downloadPlayerCsvTemplate()}
+                  >
+                    Descargar plantilla
+                  </Button>
+                </>
+              )}
+            </div>
           }
         />
       </div>
@@ -407,6 +483,7 @@ export default function AdminUsers() {
       >
         <CreateUserForm
           roleLabel={activeTab.roleLabel}
+          isPlayer={isPlayersTab}
           onSubmit={handleCreate}
           onCancel={() => {
             setShowForm(false);
@@ -414,6 +491,20 @@ export default function AdminUsers() {
           }}
           loading={createLoading}
           error={createError}
+        />
+      </FormModal>
+
+      <FormModal
+        open={showImport}
+        onClose={() => {
+          void closeImport();
+        }}
+      >
+        <ImportPlayersModal
+          onCancel={() => {
+            void closeImport();
+          }}
+          onImport={handleBulkImport}
         />
       </FormModal>
 

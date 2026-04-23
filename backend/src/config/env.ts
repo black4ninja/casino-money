@@ -18,6 +18,12 @@ export type Env = {
   JWT_REFRESH_SECRET: string;
   JWT_ACCESS_TTL: string;
   JWT_REFRESH_TTL: string;
+  /**
+   * When true, the backend serves the built SPA (frontend/dist) and handles
+   * the client-side router fallback. Auto-enabled in production; can be
+   * forced in dev with SERVE_FRONTEND=1.
+   */
+  SERVE_FRONTEND: boolean;
 };
 
 function required(name: string): string {
@@ -28,7 +34,16 @@ function required(name: string): string {
   return value;
 }
 
+function parseBool(value: string | undefined): boolean {
+  if (!value) return false;
+  const v = value.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 export function loadEnv(): Env {
+  const serveFrontend =
+    parseBool(process.env.SERVE_FRONTEND) ||
+    process.env.NODE_ENV === "production";
   return {
     PARSE_SERVER_PORT: Number(process.env.PARSE_SERVER_PORT ?? 1448),
     PARSE_SERVER_URL: required("PARSE_SERVER_URL"),
@@ -41,5 +56,6 @@ export function loadEnv(): Env {
     JWT_REFRESH_SECRET: required("JWT_REFRESH_SECRET"),
     JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL ?? "15m",
     JWT_REFRESH_TTL: process.env.JWT_REFRESH_TTL ?? "7d",
+    SERVE_FRONTEND: serveFrontend,
   };
 }

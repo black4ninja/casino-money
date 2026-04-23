@@ -6,6 +6,12 @@ export type AppUserProps = {
   matricula: string;
   role: Role;
   fullName: string | null;
+  /**
+   * Player-only field — department / program / organizational unit the
+   * student belongs to (e.g. "ITC", "IMT"). Always null for staff accounts
+   * (master/dealer). Populated via single-create or CSV bulk import.
+   */
+  departamento: string | null;
   active: boolean;
   exists: boolean;
   createdAt: Date;
@@ -28,6 +34,7 @@ export class AppUser {
   readonly matricula: string;
   readonly role: Role;
   readonly fullName: string | null;
+  readonly departamento: string | null;
   readonly active: boolean;
   readonly exists: boolean;
   readonly createdAt: Date;
@@ -37,6 +44,7 @@ export class AppUser {
     this.matricula = props.matricula;
     this.role = props.role;
     this.fullName = props.fullName;
+    this.departamento = props.departamento;
     this.active = props.active;
     this.exists = props.exists;
     this.createdAt = props.createdAt;
@@ -52,6 +60,7 @@ export class AppUser {
       matricula: this.matricula,
       role: this.role,
       fullName: this.fullName,
+      departamento: this.departamento,
       active: this.active,
       exists: this.exists,
       createdAt: this.createdAt.toISOString(),
