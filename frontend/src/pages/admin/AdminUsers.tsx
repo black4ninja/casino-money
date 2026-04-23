@@ -7,11 +7,18 @@ import {
   type DataTableColumn,
 } from "@/components/organisms/DataTable";
 import { CreateUserForm } from "@/components/organisms/CreateUserForm";
+import { EditUserForm } from "@/components/organisms/EditUserForm";
 import { Tabs, type TabItem } from "@/components/molecules/Tabs";
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { FormModal } from "@/components/molecules/FormModal";
 import { useAuthStore } from "@/stores/authStore";
 import {
+  apiArchiveUser,
   apiCreateUser,
+  apiDeleteUser,
   apiListUsers,
+  apiUnarchiveUser,
+  apiUpdateUser,
   type ApiError,
   type UserCollection,
 } from "@/lib/authApi";
@@ -53,60 +60,18 @@ const TABS: readonly RoleTabConfig[] = [
   },
 ] as const;
 
-const COLUMNS: DataTableColumn<AuthUser>[] = [
-  {
-    key: "matricula",
-    header: "Matrícula",
-    minWidth: "120px",
-    cell: (u) => (
-      <span className="font-mono text-xs text-[--color-cream]">
-        {u.matricula}
-      </span>
-    ),
-  },
-  {
-    key: "fullName",
-    header: "Nombre",
-    cell: (u) => (
-      <span className="font-display text-base text-[--color-ivory]">
-        {u.fullName ?? "—"}
-      </span>
-    ),
-  },
-  {
-    key: "role",
-    header: "Rol",
-    cell: (u) => {
-      const tone =
-        u.role === "master" ? "gold" : u.role === "dealer" ? "info" : "felt";
-      return <Badge tone={tone}>{u.role}</Badge>;
-    },
-  },
-  {
-    key: "active",
-    header: "Estado",
-    cell: (u) =>
-      u.active ? (
-        <Badge tone="success">activo</Badge>
-      ) : (
-        <Badge tone="danger">inactivo</Badge>
-      ),
-  },
-  {
-    key: "createdAt",
-    header: "Alta",
-    cell: (u) =>
-      new Date(u.createdAt).toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-  },
-];
+/** Dialog currently open in the actions flow. */
+type Dialog =
+  | { kind: "none" }
+  | { kind: "edit"; user: AuthUser }
+  | { kind: "archive"; user: AuthUser }
+  | { kind: "unarchive"; user: AuthUser }
+  | { kind: "delete"; user: AuthUser };
 
 export default function AdminUsers() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const refresh = useAuthStore((s) => s.refresh);
+  const currentUser = useAuthStore((s) => s.user);
 
   const [activeCollection, setActiveCollection] =
     useState<UserCollection>("masters");
@@ -117,36 +82,46 @@ export default function AdminUsers() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  const [dialog, setDialog] = useState<Dialog>({ kind: "none" });
+  const [dialogLoading, setDialogLoading] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+
   const activeTab =
     TABS.find((t) => t.collection === activeCollection) ?? TABS[0];
 
+  /** Wraps an authenticated API call with one-shot refresh-on-401 retry. */
+  const withAuth = useCallback(
+    async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
+      if (!accessToken) throw { status: 401, message: "no token" } as ApiError;
+      try {
+        return await fn(accessToken);
+      } catch (err) {
+        const e = err as ApiError;
+        if (e.status !== 401) throw err;
+        const fresh = await refresh();
+        return fn(fresh);
+      }
+    },
+    [accessToken, refresh],
+  );
+
   const load = useCallback(
     async (collection: UserCollection) => {
-      if (!accessToken) return;
       setLoading(true);
       setLoadError(null);
       try {
-        const { users } = await apiListUsers(accessToken, collection);
+        const { users } = await withAuth((t) => apiListUsers(t, collection));
         setUsers(users);
       } catch (err) {
         const e = err as ApiError;
-        if (e.status === 401) {
-          try {
-            const newAccess = await refresh();
-            const { users } = await apiListUsers(newAccess, collection);
-            setUsers(users);
-            return;
-          } catch {
-            setLoadError("Sesión expirada");
-            return;
-          }
-        }
-        setLoadError(e.message ?? "No se pudo cargar la lista");
+        setLoadError(
+          e.status === 401 ? "Sesión expirada" : e.message ?? "No se pudo cargar la lista",
+        );
       } finally {
         setLoading(false);
       }
     },
-    [accessToken, refresh],
+    [withAuth],
   );
 
   useEffect(() => {
@@ -158,6 +133,7 @@ export default function AdminUsers() {
     setShowForm(false);
     setCreateError(null);
     setLoadError(null);
+    setDialog({ kind: "none" });
     setUsers([]);
   }
 
@@ -166,15 +142,16 @@ export default function AdminUsers() {
     password: string;
     fullName: string;
   }) {
-    if (!accessToken) return;
     setCreateLoading(true);
     setCreateError(null);
     try {
-      await apiCreateUser(accessToken, activeCollection, {
-        matricula: data.matricula,
-        password: data.password,
-        fullName: data.fullName || undefined,
-      });
+      await withAuth((t) =>
+        apiCreateUser(t, activeCollection, {
+          matricula: data.matricula,
+          password: data.password,
+          fullName: data.fullName || undefined,
+        }),
+      );
       setShowForm(false);
       await load(activeCollection);
     } catch (err) {
@@ -189,18 +166,201 @@ export default function AdminUsers() {
     }
   }
 
+  function closeDialog() {
+    if (dialogLoading) return;
+    setDialog({ kind: "none" });
+    setDialogError(null);
+  }
+
+  async function handleEdit(
+    user: AuthUser,
+    data: { fullName: string | null; password?: string },
+  ) {
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) =>
+        apiUpdateUser(t, activeCollection, user.id, {
+          fullName: data.fullName,
+          password: data.password,
+        }),
+      );
+      setDialog({ kind: "none" });
+      await load(activeCollection);
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo guardar los cambios");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function handleArchive(user: AuthUser) {
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiArchiveUser(t, activeCollection, user.id));
+      setDialog({ kind: "none" });
+      await load(activeCollection);
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo archivar");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function handleUnarchive(user: AuthUser) {
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiUnarchiveUser(t, activeCollection, user.id));
+      setDialog({ kind: "none" });
+      await load(activeCollection);
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo reactivar");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function handleDelete(user: AuthUser) {
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiDeleteUser(t, activeCollection, user.id));
+      setDialog({ kind: "none" });
+      await load(activeCollection);
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo eliminar");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  const columns: DataTableColumn<AuthUser>[] = [
+    {
+      key: "matricula",
+      header: "Matrícula",
+      minWidth: "120px",
+      cell: (u) => (
+        <span className="font-mono text-xs text-[--color-cream]">
+          {u.matricula}
+        </span>
+      ),
+    },
+    {
+      key: "fullName",
+      header: "Nombre",
+      cell: (u) => (
+        <span className="font-display text-base text-[--color-ivory]">
+          {u.fullName ?? "—"}
+        </span>
+      ),
+    },
+    {
+      key: "role",
+      header: "Rol",
+      cell: (u) => {
+        const tone =
+          u.role === "master" ? "gold" : u.role === "dealer" ? "info" : "felt";
+        return <Badge tone={tone}>{u.role}</Badge>;
+      },
+    },
+    {
+      key: "active",
+      header: "Estado",
+      cell: (u) =>
+        u.active ? (
+          <Badge tone="success">activo</Badge>
+        ) : (
+          <Badge tone="danger">archivado</Badge>
+        ),
+    },
+    {
+      key: "createdAt",
+      header: "Alta",
+      cell: (u) =>
+        new Date(u.createdAt).toLocaleDateString("es-MX", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+    },
+    {
+      key: "id",
+      header: "Acciones",
+      sortable: false,
+      minWidth: "260px",
+      cell: (u) => {
+        const isSelf = currentUser?.id === u.id;
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="info"
+              size="sm"
+              onClick={() => {
+                setDialogError(null);
+                setDialog({ kind: "edit", user: u });
+              }}
+            >
+              Editar
+            </Button>
+            {u.active ? (
+              <Button
+                variant="purple"
+                size="sm"
+                disabled={isSelf}
+                title={isSelf ? "No puedes archivarte a ti mismo" : undefined}
+                onClick={() => {
+                  setDialogError(null);
+                  setDialog({ kind: "archive", user: u });
+                }}
+              >
+                Archivar
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setDialogError(null);
+                  setDialog({ kind: "unarchive", user: u });
+                }}
+              >
+                Reactivar
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={isSelf}
+              title={isSelf ? "No puedes eliminarte a ti mismo" : undefined}
+              onClick={() => {
+                setDialogError(null);
+                setDialog({ kind: "delete", user: u });
+              }}
+            >
+              Eliminar
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   const tabItems: TabItem<UserCollection>[] = TABS.map((t) => ({
     value: t.collection,
     label: t.title,
     count: t.collection === activeCollection ? users.length : undefined,
   }));
 
+  const dialogUser = dialog.kind !== "none" ? dialog.user : null;
+
   return (
-    <AdminLayout
-      active="users"
-      title="Usuarios"
-      subtitle={activeTab.subtitle}
-    >
+    <AdminLayout active="users" title="Usuarios" subtitle={activeTab.subtitle}>
       <div className="flex flex-col gap-6">
         <Tabs<UserCollection>
           items={tabItems}
@@ -210,19 +370,6 @@ export default function AdminUsers() {
             TABS.find((t) => t.collection === v)?.accent ?? "felt"
           }
         />
-
-        {showForm && (
-          <CreateUserForm
-            roleLabel={activeTab.roleLabel}
-            onSubmit={handleCreate}
-            onCancel={() => {
-              setShowForm(false);
-              setCreateError(null);
-            }}
-            loading={createLoading}
-            error={createError}
-          />
-        )}
 
         {loadError && (
           <p
@@ -235,7 +382,7 @@ export default function AdminUsers() {
 
         <DataTable<AuthUser>
           data={users}
-          columns={COLUMNS}
+          columns={columns}
           searchKeys={["matricula", "fullName"]}
           searchPlaceholder="Buscar por matrícula o nombre"
           loading={loading}
@@ -243,14 +390,125 @@ export default function AdminUsers() {
           getRowId={(u) => u.id}
           pageSize={10}
           toolbar={
-            !showForm ? (
-              <Button variant="primary" onClick={() => setShowForm(true)}>
-                + Nuevo {activeTab.roleLabel}
-              </Button>
-            ) : null
+            <Button variant="primary" onClick={() => setShowForm(true)}>
+              + Nuevo {activeTab.roleLabel}
+            </Button>
           }
         />
       </div>
+
+      <FormModal
+        open={showForm}
+        busy={createLoading}
+        onClose={() => {
+          setShowForm(false);
+          setCreateError(null);
+        }}
+      >
+        <CreateUserForm
+          roleLabel={activeTab.roleLabel}
+          onSubmit={handleCreate}
+          onCancel={() => {
+            setShowForm(false);
+            setCreateError(null);
+          }}
+          loading={createLoading}
+          error={createError}
+        />
+      </FormModal>
+
+      <FormModal
+        open={dialog.kind === "edit"}
+        busy={dialogLoading}
+        onClose={closeDialog}
+      >
+        {dialog.kind === "edit" && dialogUser && (
+          <EditUserForm
+            user={dialogUser}
+            roleLabel={activeTab.roleLabel}
+            onSubmit={(data) => handleEdit(dialogUser, data)}
+            onCancel={closeDialog}
+            loading={dialogLoading}
+            error={dialogError}
+          />
+        )}
+      </FormModal>
+
+      <ConfirmDialog
+        open={dialog.kind === "archive"}
+        title={`Archivar ${activeTab.roleLabel}`}
+        description={
+          dialogUser && (
+            <>
+              <p>
+                <span className="font-display text-[--color-ivory]">
+                  {dialogUser.fullName ?? dialogUser.matricula}
+                </span>{" "}
+                no podrá iniciar sesión ni ejecutar ninguna acción en el sistema
+                hasta que sea reactivado.
+              </p>
+              <p className="mt-2 text-[--color-cream]/60">
+                Sus sesiones activas se cerrarán inmediatamente.
+              </p>
+            </>
+          )
+        }
+        tone="purple"
+        confirmLabel="Archivar"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogUser && handleArchive(dialogUser)}
+        onCancel={closeDialog}
+      />
+
+      <ConfirmDialog
+        open={dialog.kind === "unarchive"}
+        title={`Reactivar ${activeTab.roleLabel}`}
+        description={
+          dialogUser && (
+            <p>
+              <span className="font-display text-[--color-ivory]">
+                {dialogUser.fullName ?? dialogUser.matricula}
+              </span>{" "}
+              podrá iniciar sesión y volver a operar normalmente.
+            </p>
+          )
+        }
+        tone="primary"
+        confirmLabel="Reactivar"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogUser && handleUnarchive(dialogUser)}
+        onCancel={closeDialog}
+      />
+
+      <ConfirmDialog
+        open={dialog.kind === "delete"}
+        title={`Eliminar ${activeTab.roleLabel}`}
+        description={
+          dialogUser && (
+            <>
+              <p>
+                Se eliminará a{" "}
+                <span className="font-display text-[--color-ivory]">
+                  {dialogUser.fullName ?? dialogUser.matricula}
+                </span>{" "}
+                del sistema. No podrá iniciar sesión ni ser visto en listados.
+              </p>
+              <p className="mt-2 text-[--color-cream]/60">
+                El registro se conserva en la base de datos para auditoría, pero
+                queda oculto para la aplicación.
+              </p>
+            </>
+          )
+        }
+        tone="danger"
+        confirmLabel="Eliminar"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogUser && handleDelete(dialogUser)}
+        onCancel={closeDialog}
+      />
     </AdminLayout>
   );
 }

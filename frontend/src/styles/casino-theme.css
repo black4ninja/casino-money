@@ -35,6 +35,11 @@
   --color-chip-green-300: #4ade80;
   --color-chip-green-shadow: #0f5a2a;
 
+  --color-chip-purple-500: #7e22ce;
+  --color-chip-purple-400: #a855f7;
+  --color-chip-purple-300: #c084fc;
+  --color-chip-purple-shadow: #3b0764;
+
   --color-chip-ivory: #f1f5f9;
 
   /*
@@ -184,6 +189,50 @@ button {
   animation: gold-shine 3s linear infinite;
 }
 
+/*
+ * Suit-colored shimmer variants — same keyframes as gold-shine so the four
+ * suits pulse in sync, but each palette honors the real card color:
+ *   • red-shine   → hearts / diamonds
+ *   • ivory-shine → spades / clubs (true black disappears on dark felt, so
+ *                   we use cream ↔ white instead for legibility)
+ */
+.red-shine {
+  background: linear-gradient(
+    110deg,
+    var(--color-chip-red-500) 0%,
+    var(--color-chip-red-300) 45%,
+    var(--color-chip-red-500) 55%,
+    var(--color-chip-red-400) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shine 3s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(200, 39, 44, 0.35));
+}
+
+/*
+ * Black suit shimmer — same technique as gold-shine and red-shine:
+ * background-clip:text with a moving gradient. The palette stays on the
+ * dark end (charcoal base, silver highlight) so the glyph reads as black
+ * with light brushing across it, not a halo sitting outside.
+ */
+.black-shine {
+  background: linear-gradient(
+    110deg,
+    #0d0d0d 0%,
+    #a6a6a6 45%,
+    #0d0d0d 55%,
+    #222222 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shine 3s linear infinite;
+}
+
 @keyframes bulb-blink {
   0%,
   100% {
@@ -214,4 +263,40 @@ button {
 
 .animate-marquee-glow {
   animation: marquee-glow 4s ease-in-out infinite;
+}
+
+/*
+ * Card-twirl — used on decorative mascots while the roulette is spinning.
+ * The mascots "impulse" the wheel and settle into place before it does, so
+ * this runs shorter (6s) than the wheel's 10s spin. Ease-out lets it start
+ * fast and settle smoothly on its final orientation (rotateY(1800deg) =
+ * 5 full card flips, ends at visual 0°).
+ */
+@keyframes card-twirl {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(1800deg);
+  }
+}
+
+.animate-card-twirl {
+  animation: card-twirl 6s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
+  backface-visibility: visible;
+}
+
+/*
+ * Shared background for the /dealer routes. Same landing image + 55% dark
+ * overlay used on the Login page, fixed-attached so it doesn't scroll with
+ * the content. Applied to a full-viewport container via <DealerShell>.
+ */
+.dealer-bg {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("/images/landing-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }

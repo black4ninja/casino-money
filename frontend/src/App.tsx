@@ -6,11 +6,14 @@ import Ingest from "./pages/Ingest";
 import Simulator from "./pages/Simulator";
 import Juegos from "./pages/juegos/Juegos";
 import Ruleta from "./pages/juegos/Ruleta";
+import RuletaReglas from "./pages/juegos/RuletaReglas";
 import AdminSession from "./pages/admin/AdminSession";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminCaja from "./pages/admin/AdminCaja";
 import AdminRoster from "./pages/admin/AdminRoster";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCasinos from "./pages/admin/AdminCasinos";
+import AdminCasinoDetail from "./pages/admin/AdminCasinoDetail";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import PlayerHome from "./pages/player/PlayerHome";
 import PlayerWallet from "./pages/player/PlayerWallet";
@@ -25,7 +28,9 @@ import DealerMenu from "./pages/dealer/DealerMenu";
 import DealerEmit from "./pages/dealer/DealerEmit";
 import DealerRedeem from "./pages/dealer/DealerRedeem";
 import DealerDashboard from "./pages/dealer/DealerDashboard";
+import DealerMesaView from "./pages/dealer/DealerMesaView";
 import { ProtectedRoute } from "@/components/templates/ProtectedRoute";
+import { DealerShell } from "@/components/templates/DealerShell";
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -43,6 +48,7 @@ export default function App() {
       <Route path="/dev" element={<Simulator />} />
       <Route path="/juegos" element={<Juegos />} />
       <Route path="/juegos/ruleta" element={<Ruleta />} />
+      <Route path="/juegos/ruleta/reglas" element={<RuletaReglas />} />
 
       {/* Master admin panel (auth required) */}
       <Route
@@ -58,6 +64,22 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={["master"]}>
             <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/casinos"
+        element={
+          <ProtectedRoute allowedRoles={["master"]}>
+            <AdminCasinos />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/casinos/:id"
+        element={
+          <ProtectedRoute allowedRoles={["master"]}>
+            <AdminCasinoDetail />
           </ProtectedRoute>
         }
       />
@@ -85,20 +107,32 @@ export default function App() {
       <Route path="/player/transfer" element={<PlayerTransfer />} />
       <Route path="/player/history" element={<PlayerHistory />} />
 
-      {/* Dealer area — master may also access (role hierarchy). */}
-      <Route
-        path="/dealer"
-        element={
-          <ProtectedRoute allowedRoles={["dealer", "master"]}>
-            <DealerHome />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/dealer/login" element={<DealerLogin />} />
-      <Route path="/dealer/menu" element={<DealerMenu />} />
-      <Route path="/dealer/emit" element={<DealerEmit />} />
-      <Route path="/dealer/redeem" element={<DealerRedeem />} />
-      <Route path="/dealer/stats" element={<DealerDashboard />} />
+      {/* Dealer area — nested under DealerShell so every /dealer/* page
+          inherits the landing-style background. Master may also access
+          per the role hierarchy. */}
+      <Route path="/dealer" element={<DealerShell />}>
+        <Route
+          index
+          element={
+            <ProtectedRoute allowedRoles={["dealer", "master"]}>
+              <DealerHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="mesa/:mesaId"
+          element={
+            <ProtectedRoute allowedRoles={["dealer", "master"]}>
+              <DealerMesaView />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="login" element={<DealerLogin />} />
+        <Route path="menu" element={<DealerMenu />} />
+        <Route path="emit" element={<DealerEmit />} />
+        <Route path="redeem" element={<DealerRedeem />} />
+        <Route path="stats" element={<DealerDashboard />} />
+      </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

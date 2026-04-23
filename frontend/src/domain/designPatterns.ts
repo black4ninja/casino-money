@@ -1,20 +1,22 @@
 /**
- * The 23 slots of the pattern roulette. Order is tuned to mimic a traditional
- * European roulette wheel layout: the zero sits at 12 o'clock and the rest
- * are distributed so that adjacent slots almost always have different colors.
+ * The 24 slots of the pattern roulette — 23 numbered design patterns (1..23)
+ * plus the "0 — Comodín" house-edge slot. The array order matches how they
+ * appear around the digital wheel and is tuned so adjacent slots almost
+ * always have different colors (European roulette style).
  *
- * With 10 behavioral (red) + 7 structural (blue) + 5 creational (gold) + 1
- * zero (green) this achieves ZERO adjacent same-color pairs around the full
- * 23-slot ring (checked wrap-around from slot 22 back to slot 0).
+ * `boardNumber` is the stable physical-board number each pattern keeps no
+ * matter where it sits on the wheel: 0 for the comodín, 1..23 alphabetically
+ * within each category (as shown on the physical betting board).
  *
- * `tone` matches the Badge/Chip color system used elsewhere:
+ * `tone` matches the Badge / Chip color system used elsewhere:
  *   gold    → Creational
  *   info    → Structural   (blue)
  *   danger  → Behavioral   (red)
  *   success → Zero         (green, traditional)
  *
  * `displayNumber` is computed post-declaration: 0 for the zero slot, and
- * 1..22 for the remaining slots in the order they appear below.
+ * 1..23 for the remaining slots in the array order below. This is what the
+ * digital wheel labels use — NOT the stable board number.
  */
 export type PatternCategory =
   | "creational"
@@ -29,6 +31,7 @@ export type DesignPattern = {
   name: string;
   shortName: string;
   displayNumber: number;
+  boardNumber: number;
   category: PatternCategory;
   tone: PatternTone;
   description: string;
@@ -36,22 +39,25 @@ export type DesignPattern = {
 
 type PatternSeed = Omit<DesignPattern, "displayNumber">;
 
+// Wheel order — tuned for color distribution (no adjacent same-color pairs).
 const SEED: readonly PatternSeed[] = [
-  // Position 0 — Zero sits at 12 o'clock (traditional).
+  // 0 — Zero at 12 o'clock.
   {
     id: "zero",
     name: "0",
     shortName: "0",
+    boardNumber: 0,
     category: "zero",
     tone: "success",
     description:
-      "La casilla cero — tradicional en la ruleta. Usa este slot como comodín para elegir libremente.",
+      "La casilla cero — ventaja de la casa. Si cae, todas las apuestas activas se pierden.",
   },
   // 1 R
   {
     id: "observer",
     name: "Observer",
     shortName: "Observer",
+    boardNumber: 18,
     category: "behavioral",
     tone: "danger",
     description:
@@ -62,6 +68,7 @@ const SEED: readonly PatternSeed[] = [
     id: "decorator",
     name: "Decorator",
     shortName: "Decorator",
+    boardNumber: 9,
     category: "structural",
     tone: "info",
     description:
@@ -72,6 +79,7 @@ const SEED: readonly PatternSeed[] = [
     id: "strategy",
     name: "Strategy",
     shortName: "Strategy",
+    boardNumber: 20,
     category: "behavioral",
     tone: "danger",
     description:
@@ -82,6 +90,7 @@ const SEED: readonly PatternSeed[] = [
     id: "composite",
     name: "Composite",
     shortName: "Composite",
+    boardNumber: 8,
     category: "structural",
     tone: "info",
     description:
@@ -92,46 +101,51 @@ const SEED: readonly PatternSeed[] = [
     id: "visitor",
     name: "Visitor",
     shortName: "Visitor",
+    boardNumber: 22,
     category: "behavioral",
     tone: "danger",
     description:
       "Separa una operación de la estructura de objetos sobre la que opera, permitiendo añadir operaciones sin tocar las clases.",
   },
-  // 6 B
+  // 6 G
   {
-    id: "flyweight",
-    name: "Flyweight",
-    shortName: "Flyweight",
-    category: "structural",
-    tone: "info",
+    id: "singleton",
+    name: "Singleton",
+    shortName: "Singleton",
+    boardNumber: 5,
+    category: "creational",
+    tone: "gold",
     description:
-      "Comparte eficientemente objetos pequeños para soportar grandes cantidades en memoria.",
+      "Garantiza una única instancia de una clase y provee un punto global de acceso a ella.",
   },
   // 7 R
   {
     id: "iterator",
     name: "Iterator",
     shortName: "Iterator",
+    boardNumber: 15,
     category: "behavioral",
     tone: "danger",
     description:
       "Accede secuencialmente a los elementos de una colección sin exponer su representación interna.",
   },
-  // 8 G
+  // 8 B
   {
-    id: "singleton",
-    name: "Singleton",
-    shortName: "Singleton",
-    category: "creational",
-    tone: "gold",
+    id: "flyweight",
+    name: "Flyweight",
+    shortName: "Flyweight",
+    boardNumber: 11,
+    category: "structural",
+    tone: "info",
     description:
-      "Garantiza una única instancia de una clase y provee un punto global de acceso a ella.",
+      "Comparte eficientemente objetos pequeños para soportar grandes cantidades en memoria.",
   },
   // 9 R
   {
     id: "memento",
     name: "Memento",
     shortName: "Memento",
+    boardNumber: 17,
     category: "behavioral",
     tone: "danger",
     description:
@@ -142,6 +156,7 @@ const SEED: readonly PatternSeed[] = [
     id: "proxy",
     name: "Proxy",
     shortName: "Proxy",
+    boardNumber: 12,
     category: "structural",
     tone: "info",
     description:
@@ -152,6 +167,7 @@ const SEED: readonly PatternSeed[] = [
     id: "template-method",
     name: "Template Method",
     shortName: "Template M.",
+    boardNumber: 21,
     category: "behavioral",
     tone: "danger",
     description:
@@ -162,6 +178,7 @@ const SEED: readonly PatternSeed[] = [
     id: "abstract-factory",
     name: "Abstract Factory",
     shortName: "Abstract Fct.",
+    boardNumber: 1,
     category: "creational",
     tone: "gold",
     description:
@@ -172,6 +189,7 @@ const SEED: readonly PatternSeed[] = [
     id: "command",
     name: "Command",
     shortName: "Command",
+    boardNumber: 14,
     category: "behavioral",
     tone: "danger",
     description:
@@ -182,6 +200,7 @@ const SEED: readonly PatternSeed[] = [
     id: "adapter",
     name: "Adapter",
     shortName: "Adapter",
+    boardNumber: 6,
     category: "structural",
     tone: "info",
     description:
@@ -192,6 +211,7 @@ const SEED: readonly PatternSeed[] = [
     id: "mediator",
     name: "Mediator",
     shortName: "Mediator",
+    boardNumber: 16,
     category: "behavioral",
     tone: "danger",
     description:
@@ -202,6 +222,7 @@ const SEED: readonly PatternSeed[] = [
     id: "builder",
     name: "Builder",
     shortName: "Builder",
+    boardNumber: 2,
     category: "creational",
     tone: "gold",
     description:
@@ -212,6 +233,7 @@ const SEED: readonly PatternSeed[] = [
     id: "chain-of-responsibility",
     name: "Chain of Responsibility",
     shortName: "Chain of Resp.",
+    boardNumber: 13,
     category: "behavioral",
     tone: "danger",
     description:
@@ -222,46 +244,62 @@ const SEED: readonly PatternSeed[] = [
     id: "bridge",
     name: "Bridge",
     shortName: "Bridge",
+    boardNumber: 7,
     category: "structural",
     tone: "info",
     description:
       "Desacopla una abstracción de su implementación para que ambas puedan variar de forma independiente.",
   },
-  // 19 G
+  // 19 R
+  {
+    id: "interpreter",
+    name: "Interpreter",
+    shortName: "Interpreter",
+    boardNumber: 23,
+    category: "behavioral",
+    tone: "danger",
+    description:
+      "Define una representación gramatical de un lenguaje e interpreta sentencias de ese lenguaje.",
+  },
+  // 20 G
   {
     id: "factory-method",
     name: "Factory Method",
     shortName: "Factory M.",
+    boardNumber: 3,
     category: "creational",
     tone: "gold",
     description:
       "Define una interfaz para crear un objeto, pero deja que las subclases decidan qué clase instanciar.",
   },
-  // 20 R
+  // 21 R
   {
     id: "state",
     name: "State",
     shortName: "State",
+    boardNumber: 19,
     category: "behavioral",
     tone: "danger",
     description:
       "Permite que un objeto altere su comportamiento cuando su estado interno cambia; parece cambiar de clase.",
   },
-  // 21 B
+  // 22 B
   {
     id: "facade",
     name: "Facade",
     shortName: "Facade",
+    boardNumber: 10,
     category: "structural",
     tone: "info",
     description:
       "Ofrece una interfaz unificada de alto nivel sobre un conjunto de interfaces de un subsistema.",
   },
-  // 22 G — closes the ring (adjacent to the zero at slot 0).
+  // 23 G — closes the ring adjacent to the zero.
   {
     id: "prototype",
     name: "Prototype",
     shortName: "Prototype",
+    boardNumber: 4,
     category: "creational",
     tone: "gold",
     description:
@@ -269,7 +307,7 @@ const SEED: readonly PatternSeed[] = [
   },
 ];
 
-// Number the slots: zero → 0, others → running 1..22 in array order.
+// Number the wheel slots: zero → 0, others → running 1..23 in array order.
 let _counter = 0;
 export const PATTERNS: readonly DesignPattern[] = SEED.map((p) => ({
   ...p,
@@ -285,7 +323,52 @@ export const CATEGORY_LABEL: Record<PatternCategory, string> = {
   zero: "Cero",
 };
 
+/** Payout multipliers by bet type (winnings per 1 unit wagered). */
+export const PAYOUTS = {
+  pleno: 22,
+  creational: 4,
+  structural: 3,
+  behavioral: 2,
+  creaEst: 1,
+  estComp: 1,
+  top5: 4,
+} as const;
+
+/**
+ * Public image path for a pattern, or null if we don't ship art for it
+ * (currently the "zero" slot is the only one without a dedicated image).
+ * Images are hosted under /public/images/patterns with the pattern `id`
+ * as the basename — keep the mapping trivial by matching filenames to ids.
+ */
+export function patternImagePath(pattern: DesignPattern): string | null {
+  if (pattern.category === "zero") return null;
+  return `/images/patterns/${pattern.id}.png`;
+}
+
 export function getPatternByIndex(i: number): DesignPattern {
   const idx = ((i % PATTERN_COUNT) + PATTERN_COUNT) % PATTERN_COUNT;
   return PATTERNS[idx]!;
+}
+
+/** Patterns sorted by their stable board number (0..23) for the physical-
+ *  board view. Skips the zero — it has its own section on the board. */
+export function patternsByCategoryForBoard(): Record<
+  Exclude<PatternCategory, "zero">,
+  DesignPattern[]
+> {
+  const groups: Record<Exclude<PatternCategory, "zero">, DesignPattern[]> = {
+    creational: [],
+    structural: [],
+    behavioral: [],
+  };
+  for (const p of PATTERNS) {
+    if (p.category === "zero") continue;
+    groups[p.category].push(p);
+  }
+  for (const key of Object.keys(groups) as Array<
+    Exclude<PatternCategory, "zero">
+  >) {
+    groups[key].sort((a, b) => a.boardNumber - b.boardNumber);
+  }
+  return groups;
 }

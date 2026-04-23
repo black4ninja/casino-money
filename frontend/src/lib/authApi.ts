@@ -26,10 +26,13 @@ export async function apiLogin(
   console.info("[auth] POST", url, { matricula, passwordLength: password.length });
   let res: Response;
   try {
+    // Only include password when non-empty — players don't send one.
+    const body: { matricula: string; password?: string } = { matricula };
+    if (password.length > 0) body.password = password;
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matricula, password }),
+      body: JSON.stringify(body),
     });
   } catch (err) {
     console.error("[auth] fetch failed (network/cors):", err);
@@ -41,6 +44,22 @@ export async function apiLogin(
     console.warn("[auth] login rejected:", e);
     throw e;
   }
+  return res.json();
+}
+
+/**
+ * Pre-login probe — asks the backend whether this matrícula is a staff
+ * account that needs a password. Unauthenticated. Used by LoginForm to
+ * show/hide the password field based on the DB (never on matrícula shape).
+ */
+export async function apiLookupMatricula(
+  matricula: string,
+): Promise<{ requiresPassword: boolean }> {
+  const clean = matricula.trim();
+  if (!clean) return { requiresPassword: false };
+  const url = `${BASE}/auth/lookup?matricula=${encodeURIComponent(clean)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw await parseError(res);
   return res.json();
 }
 
@@ -104,4 +123,60 @@ export async function apiCreateUser(
   });
   if (!res.ok) throw await parseError(res);
   return res.json();
+}
+
+export async function apiUpdateUser(
+  accessToken: string,
+  collection: UserCollection,
+  id: string,
+  data: { fullName?: string | null; password?: string },
+): Promise<{ user: AuthUser }> {
+  const res = await fetch(`${BASE}/users/${collection}/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export async function apiArchiveUser(
+  accessToken: string,
+  collection: UserCollection,
+  id: string,
+): Promise<{ user: AuthUser }> {
+  const res = await fetch(`${BASE}/users/${collection}/${id}/archive`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export async function apiUnarchiveUser(
+  accessToken: string,
+  collection: UserCollection,
+  id: string,
+): Promise<{ user: AuthUser }> {
+  const res = await fetch(`${BASE}/users/${collection}/${id}/unarchive`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export async function apiDeleteUser(
+  accessToken: string,
+  collection: UserCollection,
+  id: string,
+): Promise<void> {
+  const res = await fetch(`${BASE}/users/${collection}/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw await parseError(res);
 }

@@ -90,7 +90,7 @@ export function ResultModal({ pattern, open, onClose, onSpinAgain }: Props) {
               {pattern.name}
             </h2>
             <div className="mt-4 flex justify-center">
-              <Badge tone={pattern.tone}>
+              <Badge tone={pattern.tone} size="md">
                 {CATEGORY_LABEL[pattern.category]}
               </Badge>
             </div>

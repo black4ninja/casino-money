@@ -8,7 +8,14 @@ export type AuthUser = {
   matricula: string;
   role: Role;
   fullName: string | null;
+  /**
+   * Lifecycle flags (shared across every admin-managed entity in the app):
+   *   active = false  → archived; cannot log in or perform actions.
+   *   exists = false  → soft-deleted; hidden from every listing.
+   * Invariant: exists=false implies active=false.
+   */
   active: boolean;
+  exists: boolean;
   createdAt: string;
 };
 

@@ -5,7 +5,8 @@ export type AuthErrorCode =
   | "SESSION_REVOKED"
   | "INSUFFICIENT_ROLE"
   | "MATRICULA_TAKEN"
-  | "INACTIVE_ACCOUNT";
+  | "INACTIVE_ACCOUNT"
+  | "PASSWORD_REQUIRED";
 
 export class AuthError extends Error {
   readonly status: number;
@@ -37,5 +38,8 @@ export class AuthError extends Error {
   }
   static inactiveAccount() {
     return new AuthError("INACTIVE_ACCOUNT", 403, "Account is inactive");
+  }
+  static passwordRequired() {
+    return new AuthError("PASSWORD_REQUIRED", 400, "Password required");
   }
 }

@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes } from "react";
 
 type Props = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -13,8 +13,14 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
  *
  * This avoids nested outlines when the input sits inside a Card or Panel,
  * which are now border-less by convention.
+ *
+ * forwardRef-enabled so callers can programmatically focus (e.g. LoginForm
+ * focuses the password field when the backend confirms password is required).
  */
-export function Input({ label, hint, error, className, id, ...rest }: Props) {
+export const Input = forwardRef<HTMLInputElement, Props>(function Input(
+  { label, hint, error, className, id, ...rest },
+  ref,
+) {
   const inputId = id ?? rest.name;
   return (
     <label className="flex flex-col gap-1.5 text-sm" htmlFor={inputId}>
@@ -24,6 +30,7 @@ export function Input({ label, hint, error, className, id, ...rest }: Props) {
         </span>
       )}
       <input
+        ref={ref}
         id={inputId}
         className={[
           "rounded-xl bg-[--color-smoke]/80 px-4 py-3 text-[--color-ivory]",
@@ -46,4 +53,4 @@ export function Input({ label, hint, error, className, id, ...rest }: Props) {
       )}
     </label>
   );
-}
+});

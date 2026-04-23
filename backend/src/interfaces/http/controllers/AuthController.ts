@@ -3,6 +3,7 @@ import type { LoginUseCase } from "../../../application/use-cases/Login.js";
 import type { RefreshTokenUseCase } from "../../../application/use-cases/RefreshToken.js";
 import type { LogoutUseCase } from "../../../application/use-cases/Logout.js";
 import type { GetCurrentUserUseCase } from "../../../application/use-cases/GetCurrentUser.js";
+import type { LookupMatriculaUseCase } from "../../../application/use-cases/LookupMatricula.js";
 
 export class AuthController {
   constructor(
@@ -10,18 +11,19 @@ export class AuthController {
     private readonly refresh: RefreshTokenUseCase,
     private readonly logout: LogoutUseCase,
     private readonly me: GetCurrentUserUseCase,
+    private readonly lookup: LookupMatriculaUseCase,
   ) {}
 
   handleLogin = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { matricula, password } = req.body ?? {};
-      if (typeof matricula !== "string" || typeof password !== "string") {
-        res.status(400).json({ status: "error", message: "matricula + password required" });
+      if (typeof matricula !== "string") {
+        res.status(400).json({ status: "error", message: "matricula required" });
         return;
       }
       const result = await this.login.execute({
         matricula,
-        password,
+        password: typeof password === "string" ? password : undefined,
         userAgent: req.headers["user-agent"] ?? null,
       });
       res.json({
@@ -73,6 +75,17 @@ export class AuthController {
     try {
       const user = await this.me.execute(req.user!.sub);
       res.json({ user: user.toPublic() });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  handleLookup = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const raw = req.query.matricula;
+      const matricula = typeof raw === "string" ? raw : "";
+      const result = await this.lookup.execute(matricula);
+      res.json(result);
     } catch (err) {
       next(err);
     }

@@ -37,6 +37,8 @@ export default function Login() {
         setError("Matrícula o contraseña incorrectas");
       } else if (e.code === "INACTIVE_ACCOUNT") {
         setError("Cuenta inactiva. Contacta al maestro.");
+      } else if (e.code === "PASSWORD_REQUIRED") {
+        setError("Esta cuenta requiere contraseña.");
       } else {
         setError(e.message || "No pudimos iniciar sesión");
       }
@@ -44,14 +46,23 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-full w-full items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
+    <div
+      style={{
+        backgroundImage:
+          "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('/images/landing-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+      className="flex min-h-full w-full items-center justify-center px-4 py-8 sm:px-6 lg:px-10"
+    >
       <div className="flex w-full max-w-md flex-col gap-6 lg:max-w-5xl lg:flex-row lg:items-center lg:gap-14">
         <div className="w-full lg:flex-1">
           <CasinoSign />
         </div>
         <div className="w-full lg:flex-1">
           <Card
-            tone="felt"
+            tone="glass"
             style={{
               marginInline: 0,
               paddingInline: "1.5rem",

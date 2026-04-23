@@ -46,7 +46,7 @@ export default function Landing() {
         />
         <RoleLink
           to="/juegos/ruleta"
-          emoji="🎰"
+          emoji="🎡"
           title="Ruleta de Patrones"
           desc="Gira la ruleta para elegir un patrón de diseño al azar"
         />

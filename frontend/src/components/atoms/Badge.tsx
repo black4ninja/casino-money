@@ -32,17 +32,28 @@ const TONES: Record<Tone, string> = {
     "bg-[--color-smoke-800] text-[--color-cream]/90 ring-1 ring-inset ring-[--color-cream]/15",
 };
 
+type Size = "sm" | "md" | "lg";
+
+const SIZES: Record<Size, string> = {
+  sm: "px-2.5 py-1 text-xs",
+  md: "px-3.5 py-1.5 text-sm",
+  lg: "px-5 py-2 text-base",
+};
+
 export function Badge({
   children,
   tone = "neutral",
+  size = "sm",
 }: {
   children: ReactNode;
   tone?: Tone;
+  size?: Size;
 }) {
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-label text-xs tracking-widest",
+        "inline-flex items-center gap-1 rounded-full font-label tracking-widest",
+        SIZES[size],
         TONES[tone],
       ].join(" ")}
     >

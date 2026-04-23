@@ -15,13 +15,18 @@ type Props<T extends string> = {
   accent?: (value: T) => "gold" | "info" | "felt";
 };
 
+/**
+ * Active-tab chip treatment — mirrors the Button atom's poker-chip look
+ * (colored rim inset + white hairline + bottom thickness + drop shadow)
+ * so tabs feel like the same physical object as the action buttons.
+ */
 const ACCENT_CLASSES: Record<"gold" | "info" | "felt", string> = {
   gold:
-    "bg-gradient-to-b from-[--color-gold-300] to-[--color-gold-500] text-[--color-smoke] shadow-[0_4px_0_#8A6A10,0_6px_12px_rgba(0,0,0,0.35)]",
+    "bg-gradient-to-b from-[var(--color-gold-300)] to-[var(--color-gold-500)] border border-[var(--color-gold-500)] text-[--color-smoke] shadow-[inset_0_0_0_3px_var(--color-gold-400),inset_0_0_0_4px_rgba(255,255,255,0.4),0_5px_0_#8A6A10,0_7px_16px_rgba(0,0,0,0.4)]",
   info:
-    "bg-gradient-to-b from-[--color-chip-blue-400] to-[--color-chip-blue-500] text-white shadow-[0_4px_0_var(--color-chip-blue-shadow),0_6px_12px_rgba(0,0,0,0.35)]",
+    "bg-gradient-to-b from-[var(--color-chip-blue-400)] to-[var(--color-chip-blue-500)] border border-[var(--color-chip-blue-300)] text-white shadow-[inset_0_0_0_3px_var(--color-chip-blue-300),inset_0_0_0_4px_rgba(255,255,255,0.4),0_5px_0_var(--color-chip-blue-shadow),0_7px_16px_rgba(0,0,0,0.45)]",
   felt:
-    "bg-gradient-to-b from-[--color-felt-600] to-[--color-felt-700] text-[--color-cream] shadow-[0_4px_0_#062A1F,0_6px_12px_rgba(0,0,0,0.35)]",
+    "bg-gradient-to-b from-[var(--color-felt-600)] to-[var(--color-felt-700)] border border-[var(--color-gold-500)] text-[--color-cream] shadow-[inset_0_0_0_3px_var(--color-gold-500),inset_0_0_0_4px_rgba(255,255,255,0.25),0_5px_0_#062A1F,0_7px_16px_rgba(0,0,0,0.4)]",
 };
 
 /**

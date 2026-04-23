@@ -11,7 +11,12 @@ import type { AppUser } from "../../domain/entities/AppUser.js";
 
 export type LoginInput = {
   matricula: string;
-  password: string;
+  /**
+   * Optional. Required (and verified) only for staff roles (master, dealer).
+   * Player accounts log in with just the matrícula — by project convention
+   * students don't manage credentials.
+   */
+  password?: string;
   userAgent: string | null;
 };
 
@@ -25,6 +30,10 @@ export type LoginOutput = {
  * The access token is a JWT (stateless, short-lived).
  * The refresh token is an opaque 128-char hex string, stored SHA-256-hashed
  * server-side in AppSession. Rotated on every refresh, revocable on logout.
+ *
+ * Password policy is role-driven, not matrícula-shape-driven — the string
+ * format ("A…" vs "L…") is not reliable for role inference, so the DB is
+ * the single source of truth.
  */
 export class LoginUseCase {
   constructor(
@@ -39,10 +48,17 @@ export class LoginUseCase {
     if (!user) throw AuthError.invalidCredentials();
     if (!user.active) throw AuthError.inactiveAccount();
 
-    const hash = await this.users.getPasswordHash(user.id);
-    if (!hash) throw AuthError.invalidCredentials();
-    const ok = await verifyPassword(input.password, hash);
-    if (!ok) throw AuthError.invalidCredentials();
+    const staff = user.role === "master" || user.role === "dealer";
+    if (staff) {
+      if (!input.password || input.password.length === 0) {
+        throw AuthError.passwordRequired();
+      }
+      const hash = await this.users.getPasswordHash(user.id);
+      if (!hash) throw AuthError.invalidCredentials();
+      const ok = await verifyPassword(input.password, hash);
+      if (!ok) throw AuthError.invalidCredentials();
+    }
+    // Players: no password check. Matrícula match + active is enough.
 
     const refreshToken = generateRefreshToken();
     await this.sessions.create({

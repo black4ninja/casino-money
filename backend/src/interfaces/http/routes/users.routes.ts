@@ -11,5 +11,9 @@ export function userRoutes(
   router.use(requireAuthMiddleware, requireMasterMiddleware);
   router.get("/:collection", ctrl.listByCollection);
   router.post("/:collection", ctrl.createInCollection);
+  router.patch("/:collection/:id", ctrl.updateInCollection);
+  router.post("/:collection/:id/archive", ctrl.archiveInCollection);
+  router.post("/:collection/:id/unarchive", ctrl.unarchiveInCollection);
+  router.delete("/:collection/:id", ctrl.deleteInCollection);
   return router;
 }
