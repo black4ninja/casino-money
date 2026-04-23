@@ -12,6 +12,13 @@ export type AppUserProps = {
    * (master/dealer). Populated via single-create or CSV bulk import.
    */
   departamento: string | null;
+  /**
+   * Player-chosen display name used inside the game (leaderboards, chip
+   * transfers, etc). Independent from `fullName` — that's the school-of-
+   * record identity and is not edited by the player. `alias` is optional;
+   * when null the UI falls back to fullName or matricula.
+   */
+  alias: string | null;
   active: boolean;
   exists: boolean;
   createdAt: Date;
@@ -35,6 +42,7 @@ export class AppUser {
   readonly role: Role;
   readonly fullName: string | null;
   readonly departamento: string | null;
+  readonly alias: string | null;
   readonly active: boolean;
   readonly exists: boolean;
   readonly createdAt: Date;
@@ -45,6 +53,7 @@ export class AppUser {
     this.role = props.role;
     this.fullName = props.fullName;
     this.departamento = props.departamento;
+    this.alias = props.alias;
     this.active = props.active;
     this.exists = props.exists;
     this.createdAt = props.createdAt;
@@ -61,6 +70,7 @@ export class AppUser {
       role: this.role,
       fullName: this.fullName,
       departamento: this.departamento,
+      alias: this.alias,
       active: this.active,
       exists: this.exists,
       createdAt: this.createdAt.toISOString(),

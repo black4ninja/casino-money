@@ -9,8 +9,12 @@ import {
 } from "react";
 
 type Props = {
-  /** Full-resolution source shown inside the modal. */
-  src: string;
+  /**
+   * Full-resolution sources shown inside the modal. AVIF is served to
+   * browsers that can decode it; WebP is the fallback. Both pointing at
+   * the same visual content at matching dimensions.
+   */
+  sources: { avif: string; webp: string };
   /** Alt for both the trigger and the enlarged copy. */
   alt: string;
   /**
@@ -34,7 +38,7 @@ type Props = {
  * diagrams, pattern cards, future tutorials). Keep the wrapping <img>'s
  * styling inside `children` — the lightbox only touches trigger affordances.
  */
-export function ImageLightbox({ src, alt, children, className }: Props) {
+export function ImageLightbox({ sources, alt, children, className }: Props) {
   const [open, setOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const originRef = useRef<HTMLImageElement | null>(null);
@@ -114,23 +118,27 @@ export function ImageLightbox({ src, alt, children, className }: Props) {
           />
 
           <div className="relative z-10 flex max-h-full max-w-full items-center justify-center">
-            <img
-              ref={originRef}
-              src={src}
-              alt={alt}
-              draggable={false}
-              onClick={() => setZoomed((z) => !z)}
-              onMouseMove={onMouseMove}
-              onTouchMove={onTouchMove}
-              onMouseLeave={() => setOrigin({ x: "50%", y: "50%" })}
-              className={[
-                "block max-h-[90vh] max-w-[95vw] select-none",
-                "transition-transform duration-200 ease-out",
-                "rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)]",
-                zoomed ? "scale-[2] cursor-zoom-out" : "scale-100 cursor-zoom-in",
-              ].join(" ")}
-              style={{ transformOrigin: `${origin.x} ${origin.y}` }}
-            />
+            <picture>
+              <source srcSet={sources.avif} type="image/avif" />
+              <source srcSet={sources.webp} type="image/webp" />
+              <img
+                ref={originRef}
+                src={sources.webp}
+                alt={alt}
+                draggable={false}
+                onClick={() => setZoomed((z) => !z)}
+                onMouseMove={onMouseMove}
+                onTouchMove={onTouchMove}
+                onMouseLeave={() => setOrigin({ x: "50%", y: "50%" })}
+                className={[
+                  "block max-h-[90vh] max-w-[95vw] select-none",
+                  "transition-transform duration-200 ease-out",
+                  "rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)]",
+                  zoomed ? "scale-[2] cursor-zoom-out" : "scale-100 cursor-zoom-in",
+                ].join(" ")}
+                style={{ transformOrigin: `${origin.x} ${origin.y}` }}
+              />
+            </picture>
 
             <button
               type="button"

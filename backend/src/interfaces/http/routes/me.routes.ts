@@ -14,5 +14,12 @@ export function meRoutes(
   const router = Router();
   router.use(requireAuthMiddleware);
   router.get("/mesas", ctrl.myMesas);
+  router.get("/casinos", ctrl.myCasinos);
+  router.get("/casinos/:casinoId/mesas", ctrl.myCasinoMesas);
+  router.get(
+    "/casinos/:casinoId/mesas/:mesaId/spin/last",
+    ctrl.myCasinoMesaLastSpin,
+  );
+  router.patch("/alias", ctrl.patchAlias);
   return router;
 }

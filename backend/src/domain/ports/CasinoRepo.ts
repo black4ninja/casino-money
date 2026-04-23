@@ -8,6 +8,10 @@ export type CreateCasinoInput = {
 export type UpdateCasinoInput = {
   name?: string;
   date?: Date;
+  /** Replaces the full list. Empty array clears all assignments. */
+  departamentos?: string[];
+  /** Replaces the full list. Empty array clears all assignments. */
+  dealerIds?: string[];
 };
 
 export interface CasinoRepo {

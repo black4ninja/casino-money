@@ -40,6 +40,14 @@
   --color-chip-purple-300: #c084fc;
   --color-chip-purple-shadow: #3b0764;
 
+  /* Black / onyx chip — in real casinos this is the high-denomination chip
+     ($100). Used for hero/flagship calls-to-action where the gold chip would
+     feel too showy. Rim is gold so it still reads as premium casino. */
+  --color-chip-black-500: #0a0a0c;
+  --color-chip-black-400: #1a1a1f;
+  --color-chip-black-300: #30303a;
+  --color-chip-black-shadow: #000000;
+
   --color-chip-ivory: #f1f5f9;
 
   /*
@@ -287,14 +295,40 @@ button {
 }
 
 /*
- * Shared background for the /dealer routes. Same landing image + 55% dark
- * overlay used on the Login page, fixed-attached so it doesn't scroll with
- * the content. Applied to a full-viewport container via <DealerShell>.
+ * Shared landing background. AVIF is served to browsers that support it
+ * (Safari 16+, Chrome/Edge/Firefox modern), WebP covers the rest. The
+ * first `background-image` declaration is a hard fallback for ancient
+ * browsers that don't understand image-set() — they get WebP directly.
+ * Modern browsers pick up the second declaration and override.
+ *
+ * `.landing-bg` is used on the Login screen (scrolls with content);
+ * `.dealer-bg` extends it with fixed attachment for the /dealer routes.
  */
+.landing-bg {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("/images/landing-bg.webp");
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    image-set(
+      url("/images/landing-bg.avif") type("image/avif"),
+      url("/images/landing-bg.webp") type("image/webp")
+    );
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .dealer-bg {
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-    url("/images/landing-bg.jpg");
+    url("/images/landing-bg.webp");
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    image-set(
+      url("/images/landing-bg.avif") type("image/avif"),
+      url("/images/landing-bg.webp") type("image/webp")
+    );
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

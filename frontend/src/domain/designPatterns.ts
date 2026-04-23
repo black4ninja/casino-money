@@ -334,15 +334,23 @@ export const PAYOUTS = {
   top5: 4,
 } as const;
 
+export type PatternImageSources = { avif: string; webp: string };
+
 /**
- * Public image path for a pattern, or null if we don't ship art for it
+ * Public image sources for a pattern, or null if we don't ship art for it
  * (currently the "zero" slot is the only one without a dedicated image).
- * Images are hosted under /public/images/patterns with the pattern `id`
- * as the basename — keep the mapping trivial by matching filenames to ids.
+ * AVIF is the primary source; WebP is the fallback for older browsers.
+ * Consumers render via a <picture> element so the browser picks whichever
+ * it can decode.
  */
-export function patternImagePath(pattern: DesignPattern): string | null {
+export function patternImagePath(
+  pattern: DesignPattern,
+): PatternImageSources | null {
   if (pattern.category === "zero") return null;
-  return `/images/patterns/${pattern.id}.png`;
+  return {
+    avif: `/images/patterns/${pattern.id}.avif`,
+    webp: `/images/patterns/${pattern.id}.webp`,
+  };
 }
 
 export function getPatternByIndex(i: number): DesignPattern {

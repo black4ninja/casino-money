@@ -203,17 +203,21 @@ export function RuletaGameView({ onSpinComplete }: Props = {}) {
           }}
           className="pointer-events-none hidden lg:block"
         >
-          <img
-            key={`mascot-left-${spinAnimKey}`}
-            src="/images/phanphy-joker.png"
-            alt=""
-            aria-hidden
-            loading="lazy"
-            className={[
-              "h-64 w-auto select-none drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] xl:h-72 2xl:h-80",
-              isSpinning && !reduced ? "animate-card-twirl" : "",
-            ].join(" ")}
-          />
+          <picture>
+            <source srcSet="/images/phanphy-joker.avif" type="image/avif" />
+            <source srcSet="/images/phanphy-joker.webp" type="image/webp" />
+            <img
+              key={`mascot-left-${spinAnimKey}`}
+              src="/images/phanphy-joker.webp"
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className={[
+                "h-64 w-auto select-none drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] xl:h-72 2xl:h-80",
+                isSpinning && !reduced ? "animate-card-twirl" : "",
+              ].join(" ")}
+            />
+          </picture>
         </div>
 
         <RouletteWheel
@@ -239,17 +243,21 @@ export function RuletaGameView({ onSpinComplete }: Props = {}) {
           }}
           className="pointer-events-none hidden lg:block"
         >
-          <img
-            key={`mascot-right-${spinAnimKey}`}
-            src="/images/phanphy-joker.png"
-            alt=""
-            aria-hidden
-            loading="lazy"
-            className={[
-              "h-64 w-auto select-none drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] xl:h-72 2xl:h-80",
-              isSpinning && !reduced ? "animate-card-twirl" : "",
-            ].join(" ")}
-          />
+          <picture>
+            <source srcSet="/images/phanphy-joker.avif" type="image/avif" />
+            <source srcSet="/images/phanphy-joker.webp" type="image/webp" />
+            <img
+              key={`mascot-right-${spinAnimKey}`}
+              src="/images/phanphy-joker.webp"
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className={[
+                "h-64 w-auto select-none drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] xl:h-72 2xl:h-80",
+                isSpinning && !reduced ? "animate-card-twirl" : "",
+              ].join(" ")}
+            />
+          </picture>
         </div>
       </div>
 

@@ -13,6 +13,8 @@ import { casinoRoutes } from "./interfaces/http/routes/casinos.routes.js";
 import { mesaRoutes } from "./interfaces/http/routes/mesas.routes.js";
 import { meRoutes } from "./interfaces/http/routes/me.routes.js";
 import { rouletteSpinRoutes } from "./interfaces/http/routes/roulette-spins.routes.js";
+import { economyRoutes } from "./interfaces/http/routes/economy.routes.js";
+import { slotsRoutes } from "./interfaces/http/routes/slots.routes.js";
 import { errorHandler } from "./interfaces/http/middlewares/errorHandler.js";
 import { requireAuth } from "./interfaces/http/middlewares/requireAuth.js";
 import { requireRole } from "./interfaces/http/middlewares/requireRole.js";
@@ -21,6 +23,9 @@ import { ParseAppSessionRepo } from "./infrastructure/parse/repositories/AppSess
 import { ParseCasinoRepo } from "./infrastructure/parse/repositories/CasinoRepo.js";
 import { ParseMesaRepo } from "./infrastructure/parse/repositories/MesaRepo.js";
 import { ParseRouletteSpinRepo } from "./infrastructure/parse/repositories/RouletteSpinRepo.js";
+import { ParseWalletRepo } from "./infrastructure/parse/repositories/WalletRepo.js";
+import { ParseWalletTransactionRepo } from "./infrastructure/parse/repositories/WalletTransactionRepo.js";
+import { ParseSlotMachineSpinRepo } from "./infrastructure/parse/repositories/SlotMachineSpinRepo.js";
 import { JwtService } from "./infrastructure/crypto/jwtService.js";
 import { LoginUseCase } from "./application/use-cases/Login.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshToken.js";
@@ -32,26 +37,41 @@ import { UpdateUserUseCase } from "./application/use-cases/UpdateUser.js";
 import { SetUserActiveUseCase } from "./application/use-cases/SetUserActive.js";
 import { DeleteUserUseCase } from "./application/use-cases/DeleteUser.js";
 import { BulkCreatePlayersUseCase } from "./application/use-cases/BulkCreatePlayers.js";
+import { ListPlayerDepartamentosUseCase } from "./application/use-cases/ListPlayerDepartamentos.js";
 import { LookupMatriculaUseCase } from "./application/use-cases/LookupMatricula.js";
 import { CreateCasinoUseCase } from "./application/use-cases/CreateCasino.js";
 import { ListCasinosUseCase } from "./application/use-cases/ListCasinos.js";
 import { UpdateCasinoUseCase } from "./application/use-cases/UpdateCasino.js";
 import { SetCasinoActiveUseCase } from "./application/use-cases/SetCasinoActive.js";
 import { DeleteCasinoUseCase } from "./application/use-cases/DeleteCasino.js";
+import { ListCasinoPlayersUseCase } from "./application/use-cases/ListCasinoPlayers.js";
 import { CreateMesaUseCase } from "./application/use-cases/CreateMesa.js";
 import { ListMesasByCasinoUseCase } from "./application/use-cases/ListMesasByCasino.js";
 import { UpdateMesaUseCase } from "./application/use-cases/UpdateMesa.js";
 import { SetMesaActiveUseCase } from "./application/use-cases/SetMesaActive.js";
 import { DeleteMesaUseCase } from "./application/use-cases/DeleteMesa.js";
 import { ListMyMesasUseCase } from "./application/use-cases/ListMyMesas.js";
+import { ListMyCasinosUseCase } from "./application/use-cases/ListMyCasinos.js";
+import { ListMyCasinoMesasUseCase } from "./application/use-cases/ListMyCasinoMesas.js";
+import { GetMyCasinoMesaLastSpinUseCase } from "./application/use-cases/GetMyCasinoMesaLastSpin.js";
+import { UpdateMyAliasUseCase } from "./application/use-cases/UpdateMyAlias.js";
 import { RecordRouletteSpinUseCase } from "./application/use-cases/RecordRouletteSpin.js";
 import { GetLastRouletteSpinUseCase } from "./application/use-cases/GetLastRouletteSpin.js";
+import { BulkCreditCasinoPlayersUseCase } from "./application/use-cases/BulkCreditCasinoPlayers.js";
+import { CreditPlayerInCasinoUseCase } from "./application/use-cases/CreditPlayerInCasino.js";
+import { ListCasinoEconomyWalletsUseCase } from "./application/use-cases/ListCasinoEconomyWallets.js";
+import { ListPlayerCasinoTransactionsUseCase } from "./application/use-cases/ListPlayerCasinoTransactions.js";
+import { PlaySlotMachineSpinUseCase } from "./application/use-cases/PlaySlotMachineSpin.js";
+import { ListSlotMachineHistoryUseCase } from "./application/use-cases/ListSlotMachineHistory.js";
+import { GetMyCasinoWalletUseCase } from "./application/use-cases/GetMyCasinoWallet.js";
 import { AuthController } from "./interfaces/http/controllers/AuthController.js";
 import { UserController } from "./interfaces/http/controllers/UserController.js";
 import { CasinoController } from "./interfaces/http/controllers/CasinoController.js";
 import { MesaController } from "./interfaces/http/controllers/MesaController.js";
 import { MeController } from "./interfaces/http/controllers/MeController.js";
 import { RouletteSpinController } from "./interfaces/http/controllers/RouletteSpinController.js";
+import { EconomyController } from "./interfaces/http/controllers/EconomyController.js";
+import { SlotMachineController } from "./interfaces/http/controllers/SlotMachineController.js";
 import { bootstrapInitialMaster } from "./infrastructure/seed/bootstrap.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -91,6 +111,9 @@ export async function createApp(env: Env): Promise<Express> {
   const casinoRepo = new ParseCasinoRepo(parse);
   const mesaRepo = new ParseMesaRepo(parse);
   const spinRepo = new ParseRouletteSpinRepo(parse);
+  const walletRepo = new ParseWalletRepo(parse);
+  const walletTxRepo = new ParseWalletTransactionRepo(parse);
+  const slotSpinRepo = new ParseSlotMachineSpinRepo(parse);
   const jwt = new JwtService({
     accessSecret: env.JWT_ACCESS_SECRET,
     refreshSecret: env.JWT_REFRESH_SECRET,
@@ -109,20 +132,69 @@ export async function createApp(env: Env): Promise<Express> {
   const setUserActive = new SetUserActiveUseCase(userRepo, sessionRepo);
   const deleteUser = new DeleteUserUseCase(userRepo, sessionRepo);
   const bulkCreatePlayers = new BulkCreatePlayersUseCase(createUser);
+  const listPlayerDepartamentos = new ListPlayerDepartamentosUseCase(userRepo);
   const lookupMatricula = new LookupMatriculaUseCase(userRepo);
   const createCasino = new CreateCasinoUseCase(casinoRepo);
   const listCasinos = new ListCasinosUseCase(casinoRepo);
-  const updateCasino = new UpdateCasinoUseCase(casinoRepo);
+  const updateCasino = new UpdateCasinoUseCase(casinoRepo, userRepo);
   const setCasinoActive = new SetCasinoActiveUseCase(casinoRepo);
   const deleteCasino = new DeleteCasinoUseCase(casinoRepo);
+  const listCasinoPlayers = new ListCasinoPlayersUseCase(casinoRepo, userRepo);
   const createMesa = new CreateMesaUseCase(mesaRepo, casinoRepo);
   const listMesas = new ListMesasByCasinoUseCase(mesaRepo);
-  const updateMesa = new UpdateMesaUseCase(mesaRepo, userRepo);
+  const updateMesa = new UpdateMesaUseCase(mesaRepo, userRepo, casinoRepo);
   const setMesaActive = new SetMesaActiveUseCase(mesaRepo);
   const deleteMesa = new DeleteMesaUseCase(mesaRepo);
   const listMyMesas = new ListMyMesasUseCase(mesaRepo, casinoRepo);
+  const listMyCasinos = new ListMyCasinosUseCase(casinoRepo, userRepo);
+  const listMyCasinoMesas = new ListMyCasinoMesasUseCase(
+    mesaRepo,
+    casinoRepo,
+    userRepo,
+  );
+  const getMyCasinoMesaLastSpin = new GetMyCasinoMesaLastSpinUseCase(
+    spinRepo,
+    mesaRepo,
+    casinoRepo,
+    userRepo,
+  );
+  const updateMyAlias = new UpdateMyAliasUseCase(userRepo);
   const recordSpin = new RecordRouletteSpinUseCase(spinRepo, mesaRepo);
   const getLastSpin = new GetLastRouletteSpinUseCase(spinRepo, mesaRepo);
+  const bulkCreditCasinoPlayers = new BulkCreditCasinoPlayersUseCase(
+    casinoRepo,
+    walletRepo,
+    walletTxRepo,
+    listCasinoPlayers,
+  );
+  const creditPlayerInCasino = new CreditPlayerInCasinoUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+  );
+  const listCasinoEconomyWallets = new ListCasinoEconomyWalletsUseCase(
+    casinoRepo,
+    walletRepo,
+    listCasinoPlayers,
+  );
+  const listPlayerCasinoTransactions = new ListPlayerCasinoTransactionsUseCase(
+    casinoRepo,
+    userRepo,
+    walletTxRepo,
+  );
+  const playSlotMachineSpin = new PlaySlotMachineSpinUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+    slotSpinRepo,
+  );
+  const listSlotMachineHistory = new ListSlotMachineHistoryUseCase(
+    casinoRepo,
+    slotSpinRepo,
+  );
+  const getMyCasinoWallet = new GetMyCasinoWalletUseCase(casinoRepo, walletRepo);
 
   const authController = new AuthController(login, refresh, logout, getMe, lookupMatricula);
   const userController = new UserController(
@@ -132,6 +204,7 @@ export async function createApp(env: Env): Promise<Express> {
     setUserActive,
     deleteUser,
     bulkCreatePlayers,
+    listPlayerDepartamentos,
   );
   const casinoController = new CasinoController(
     createCasino,
@@ -139,6 +212,7 @@ export async function createApp(env: Env): Promise<Express> {
     updateCasino,
     setCasinoActive,
     deleteCasino,
+    listCasinoPlayers,
     casinoRepo,
   );
   const mesaController = new MesaController(
@@ -148,8 +222,25 @@ export async function createApp(env: Env): Promise<Express> {
     setMesaActive,
     deleteMesa,
   );
-  const meController = new MeController(listMyMesas);
+  const meController = new MeController(
+    listMyMesas,
+    listMyCasinos,
+    listMyCasinoMesas,
+    getMyCasinoMesaLastSpin,
+    updateMyAlias,
+  );
   const spinController = new RouletteSpinController(recordSpin, getLastSpin);
+  const economyController = new EconomyController(
+    bulkCreditCasinoPlayers,
+    creditPlayerInCasino,
+    listCasinoEconomyWallets,
+    listPlayerCasinoTransactions,
+  );
+  const slotMachineController = new SlotMachineController(
+    playSlotMachineSpin,
+    listSlotMachineHistory,
+    getMyCasinoWallet,
+  );
 
   const requireAuthMw = requireAuth(jwt);
   const requireMasterMw = requireRole("master");
@@ -166,6 +257,17 @@ export async function createApp(env: Env): Promise<Express> {
   app.use(
     "/api/v1/mesas/:mesaId/spins",
     rouletteSpinRoutes(spinController, requireAuthMw),
+  );
+  app.use(
+    "/api/v1/casinos/:casinoId/economy",
+    economyRoutes(economyController, requireAuthMw, requireMasterMw),
+  );
+  // Montado bajo /me/ en vez de /casinos/ para escapar del middleware
+  // requireMaster que aplica a todo el router de casinos — la tragamonedas
+  // es un flujo de jugador y no debe pasar por ese gating.
+  app.use(
+    "/api/v1/me/casinos/:casinoId/slots",
+    slotsRoutes(slotMachineController, requireAuthMw),
   );
 
   // Unified deployment: serve the built SPA from the same origin as the API.

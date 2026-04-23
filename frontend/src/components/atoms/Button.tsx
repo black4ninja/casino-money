@@ -7,6 +7,7 @@ type Variant =
   | "info"
   | "danger"
   | "purple"
+  | "onyx"
   | "ghost";
 type Size = "sm" | "md" | "lg";
 
@@ -42,6 +43,8 @@ const BASE =
  *   purple  → violet — premium / high-denomination
  *   gold    → gold   — master / premium accent
  *   felt    → dark green — contextual table action
+ *   onyx    → black + gold rim — high-denomination hero CTA (casino entry,
+ *             flagship actions). Use sparingly so it retains its weight.
  *   ghost   → transparent — tertiary / cancel / nav
  */
 const VARIANTS: Record<Variant, string> = {
@@ -54,6 +57,7 @@ const VARIANTS: Record<Variant, string> = {
     "bg-gradient-to-b from-[var(--color-chip-red-400)] to-[var(--color-chip-red-500)] border-[--color-chip-red-300] text-white shadow-[inset_0_0_0_3px_var(--color-chip-red-300),inset_0_0_0_4px_rgba(255,255,255,0.4),0_5px_0_var(--color-chip-red-shadow),0_7px_16px_rgba(0,0,0,0.45)] hover:brightness-110",
   purple:
     "bg-gradient-to-b from-[var(--color-chip-purple-400)] to-[var(--color-chip-purple-500)] border-[--color-chip-purple-300] text-white shadow-[inset_0_0_0_3px_var(--color-chip-purple-300),inset_0_0_0_4px_rgba(255,255,255,0.4),0_5px_0_var(--color-chip-purple-shadow),0_7px_16px_rgba(0,0,0,0.45)] hover:brightness-110",
+  onyx: "bg-gradient-to-b from-[var(--color-chip-black-400)] to-[var(--color-chip-black-500)] border-[--color-gold-500] text-[--color-gold-300] shadow-[inset_0_0_0_3px_var(--color-gold-500),inset_0_0_0_4px_rgba(255,255,255,0.1),0_5px_0_var(--color-chip-black-shadow),0_7px_20px_rgba(0,0,0,0.6)] hover:text-[--color-gold-400] hover:brightness-125",
   ghost:
     "bg-transparent border-[--color-cream]/40 text-[--color-cream]/90 hover:bg-white/5",
 };

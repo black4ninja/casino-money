@@ -8,10 +8,21 @@ import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { FormModal } from "@/components/molecules/FormModal";
 import { MesaForm } from "@/components/organisms/MesaForm";
 import { AssignTalladorForm } from "@/components/organisms/AssignTalladorForm";
+import { AssignCasinoDepartamentosForm } from "@/components/organisms/AssignCasinoDepartamentosForm";
+import { AssignCasinoDealersForm } from "@/components/organisms/AssignCasinoDealersForm";
 import { useAuthStore } from "@/stores/authStore";
-import { apiListUsers, type ApiError } from "@/lib/authApi";
+import {
+  apiListPlayerDepartamentos,
+  apiListUsers,
+  type ApiError,
+} from "@/lib/authApi";
 import type { AuthUser } from "@/storage/auth";
-import { apiGetCasino, type Casino } from "@/lib/casinoApi";
+import {
+  apiGetCasino,
+  apiListCasinoPlayers,
+  apiUpdateCasino,
+  type Casino,
+} from "@/lib/casinoApi";
 import {
   apiArchiveMesa,
   apiCreateMesa,
@@ -41,7 +52,9 @@ type MesaDialog =
   | { kind: "assignTallador"; mesa: Mesa }
   | { kind: "archive"; mesa: Mesa }
   | { kind: "unarchive"; mesa: Mesa }
-  | { kind: "delete"; mesa: Mesa };
+  | { kind: "delete"; mesa: Mesa }
+  | { kind: "assignDepartamentos" }
+  | { kind: "assignDealers" };
 
 export default function AdminCasinoDetail() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +74,14 @@ export default function AdminCasinoDetail() {
   // page load; refreshed on demand if the picker needs fresher data later.
   const [dealers, setDealers] = useState<AuthUser[]>([]);
   const [dealersLoaded, setDealersLoaded] = useState(false);
+
+  // Available departamentos for the casino-level multi-select, and the
+  // materialized player roster (derived server-side from casino.departamentos).
+  const [availableDepartamentos, setAvailableDepartamentos] = useState<string[]>(
+    [],
+  );
+  const [casinoPlayers, setCasinoPlayers] = useState<AuthUser[]>([]);
+  const [casinoPlayersLoading, setCasinoPlayersLoading] = useState(false);
 
   const [dialog, setDialog] = useState<MesaDialog>({ kind: "none" });
   const [dialogLoading, setDialogLoading] = useState(false);
@@ -128,11 +149,37 @@ export default function AdminCasinoDetail() {
     }
   }, [withAuth]);
 
+  const loadDepartamentos = useCallback(async () => {
+    try {
+      const { departamentos } = await withAuth((t) =>
+        apiListPlayerDepartamentos(t),
+      );
+      setAvailableDepartamentos(departamentos);
+    } catch {
+      // Non-fatal: the picker will show an empty-state message.
+    }
+  }, [withAuth]);
+
+  const loadCasinoPlayers = useCallback(async () => {
+    if (!id) return;
+    setCasinoPlayersLoading(true);
+    try {
+      const { players } = await withAuth((t) => apiListCasinoPlayers(t, id));
+      setCasinoPlayers(players);
+    } catch {
+      setCasinoPlayers([]);
+    } finally {
+      setCasinoPlayersLoading(false);
+    }
+  }, [id, withAuth]);
+
   useEffect(() => {
     loadCasino();
     loadMesas();
     loadDealers();
-  }, [loadCasino, loadMesas, loadDealers]);
+    loadDepartamentos();
+    loadCasinoPlayers();
+  }, [loadCasino, loadMesas, loadDealers, loadDepartamentos, loadCasinoPlayers]);
 
   function closeDialog() {
     if (dialogLoading) return;
@@ -220,6 +267,43 @@ export default function AdminCasinoDetail() {
     }
   }
 
+  async function handleSaveDepartamentos(departamentos: string[]) {
+    if (!id) return;
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      const { casino: updated } = await withAuth((t) =>
+        apiUpdateCasino(t, id, { departamentos }),
+      );
+      setCasino(updated);
+      setDialog({ kind: "none" });
+      await loadCasinoPlayers();
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudieron guardar los departamentos");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function handleSaveDealers(dealerIds: string[]) {
+    if (!id) return;
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      const { casino: updated } = await withAuth((t) =>
+        apiUpdateCasino(t, id, { dealerIds }),
+      );
+      setCasino(updated);
+      setDialog({ kind: "none" });
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudieron guardar los talladores");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
   async function handleDeleteMesa(mesa: Mesa) {
     if (!id) return;
     setDialogLoading(true);
@@ -290,15 +374,24 @@ export default function AdminCasinoDetail() {
           <>
             {/* Casino summary header card */}
             <Card tone="night" className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-display text-2xl text-[--color-ivory]">
-                  {casino.name}
-                </h2>
-                {casino.active ? (
-                  <Badge tone="success">activo</Badge>
-                ) : (
-                  <Badge tone="danger">archivado</Badge>
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="font-display text-2xl text-[--color-ivory]">
+                    {casino.name}
+                  </h2>
+                  {casino.active ? (
+                    <Badge tone="success">activo</Badge>
+                  ) : (
+                    <Badge tone="danger">archivado</Badge>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate(`/admin/casinos/${id}/economy`)}
+                >
+                  Ver economía
+                </Button>
               </div>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div>
@@ -318,6 +411,148 @@ export default function AdminCasinoDetail() {
                   </dd>
                 </div>
               </dl>
+            </Card>
+
+            {/* Departamentos section */}
+            <Card tone="night" className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-xl text-[--color-ivory]">
+                    Departamentos
+                  </h3>
+                  <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+                    {casino.departamentos.length === 0
+                      ? "Sin departamentos asignados"
+                      : `${casino.departamentos.length} departamento(s)`}
+                  </p>
+                </div>
+                <Button
+                  variant="info"
+                  size="sm"
+                  disabled={!casino.active}
+                  title={
+                    casino.active
+                      ? undefined
+                      : "Reactiva el casino para modificar asignaciones"
+                  }
+                  onClick={() => {
+                    setDialogError(null);
+                    setDialog({ kind: "assignDepartamentos" });
+                  }}
+                >
+                  Cambiar departamentos
+                </Button>
+              </div>
+              {casino.departamentos.length === 0 ? (
+                <p className="font-label text-sm text-[--color-cream]/70">
+                  Agrega uno o más departamentos para que sus jugadores
+                  participen en este casino.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {casino.departamentos.map((d) => (
+                    <Badge key={d} tone="felt">
+                      {d}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Jugadores del casino (derivado) */}
+            <Card tone="night" className="flex flex-col gap-3">
+              <div>
+                <h3 className="font-display text-xl text-[--color-ivory]">
+                  Jugadores
+                </h3>
+                <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+                  {casinoPlayersLoading
+                    ? "Cargando…"
+                    : `${casinoPlayers.length} jugador(es) derivados de los departamentos`}
+                </p>
+              </div>
+              {!casinoPlayersLoading && casinoPlayers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(
+                    casinoPlayers.reduce<Record<string, number>>((acc, p) => {
+                      const key = p.departamento ?? "—";
+                      acc[key] = (acc[key] ?? 0) + 1;
+                      return acc;
+                    }, {}),
+                  )
+                    .sort(([a], [b]) => a.localeCompare(b, "es"))
+                    .map(([dept, count]) => (
+                      <Badge key={dept} tone="neutral">
+                        {dept} · {count}
+                      </Badge>
+                    ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Talladores del casino */}
+            <Card tone="night" className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-xl text-[--color-ivory]">
+                    Talladores
+                  </h3>
+                  <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+                    {casino.dealerIds.length === 0
+                      ? "Sin talladores asignados"
+                      : `${casino.dealerIds.length} tallador(es)`}
+                  </p>
+                </div>
+                <Button
+                  variant="info"
+                  size="sm"
+                  disabled={!casino.active || !dealersLoaded}
+                  title={
+                    casino.active
+                      ? undefined
+                      : "Reactiva el casino para modificar asignaciones"
+                  }
+                  onClick={() => {
+                    setDialogError(null);
+                    setDialog({ kind: "assignDealers" });
+                  }}
+                >
+                  Cambiar talladores
+                </Button>
+              </div>
+              {casino.dealerIds.length === 0 ? (
+                <p className="font-label text-sm text-[--color-cream]/70">
+                  Sin talladores asignados al casino. Agrega algunos para poder
+                  asignarlos a las mesas.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {casino.dealerIds.map((did) => {
+                    const u = dealers.find((d) => d.id === did);
+                    return (
+                      <li
+                        key={did}
+                        className="flex items-center gap-3 rounded-lg bg-[--color-smoke]/60 px-3 py-2 ring-1 ring-inset ring-white/5"
+                      >
+                        {u ? (
+                          <>
+                            <span className="font-display text-[--color-ivory]">
+                              {u.fullName ?? "(sin nombre)"}
+                            </span>
+                            <span className="font-mono text-xs text-[--color-gold-300]">
+                              {u.matricula}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-mono text-xs text-[--color-cream]/60">
+                            (no está en la lista actual — puede estar archivado)
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </Card>
 
             {/* Mesas section */}
@@ -445,7 +680,42 @@ export default function AdminCasinoDetail() {
           <AssignTalladorForm
             dealers={dealers}
             currentTalladorId={dialog.mesa.talladorId}
+            allowedDealerIds={casino?.dealerIds}
             onSubmit={(talladorId) => handleAssignTallador(dialog.mesa, talladorId)}
+            onCancel={closeDialog}
+            loading={dialogLoading || !dealersLoaded}
+            error={dialogError}
+          />
+        )}
+      </FormModal>
+
+      <FormModal
+        open={dialog.kind === "assignDepartamentos"}
+        busy={dialogLoading}
+        onClose={closeDialog}
+      >
+        {dialog.kind === "assignDepartamentos" && casino && (
+          <AssignCasinoDepartamentosForm
+            availableDepartamentos={availableDepartamentos}
+            currentDepartamentos={casino.departamentos}
+            onSubmit={handleSaveDepartamentos}
+            onCancel={closeDialog}
+            loading={dialogLoading}
+            error={dialogError}
+          />
+        )}
+      </FormModal>
+
+      <FormModal
+        open={dialog.kind === "assignDealers"}
+        busy={dialogLoading}
+        onClose={closeDialog}
+      >
+        {dialog.kind === "assignDealers" && casino && (
+          <AssignCasinoDealersForm
+            availableDealers={dealers}
+            currentDealerIds={casino.dealerIds}
+            onSubmit={handleSaveDealers}
             onCancel={closeDialog}
             loading={dialogLoading || !dealersLoaded}
             error={dialogError}

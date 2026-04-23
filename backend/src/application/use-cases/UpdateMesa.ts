@@ -1,5 +1,6 @@
 import type { MesaRepo } from "../../domain/ports/MesaRepo.js";
 import type { AppUserRepo } from "../../domain/ports/AppUserRepo.js";
+import type { CasinoRepo } from "../../domain/ports/CasinoRepo.js";
 import type { Mesa } from "../../domain/entities/Mesa.js";
 import type { GameType } from "../../domain/entities/GameType.js";
 import { isGameType } from "../../domain/entities/GameType.js";
@@ -21,11 +22,17 @@ export type UpdateMesaInput = {
  * active dealer (role=dealer). Masters are not accepted here even though
  * the role hierarchy makes them capable of dealer actions — a mesa assignment
  * is a scheduling fact about a specific person with that job, not a permission.
+ *
+ * If the parent casino has a non-empty `dealerIds` pool, the tallador must
+ * belong to it. An empty pool means "no restriction yet" so legacy casinos
+ * that predate the refactor keep working until the admin explicitly picks
+ * a dealer list.
  */
 export class UpdateMesaUseCase {
   constructor(
     private readonly mesas: MesaRepo,
     private readonly users: AppUserRepo,
+    private readonly casinos: CasinoRepo,
   ) {}
 
   async execute(input: UpdateMesaInput): Promise<Mesa> {
@@ -67,6 +74,24 @@ export class UpdateMesaUseCase {
             "INSUFFICIENT_ROLE",
             400,
             "El usuario asignado debe ser tallador",
+          );
+        }
+        const casino = await this.casinos.findById(mesa.casinoId);
+        if (!casino) {
+          throw new AuthError(
+            "INVALID_CREDENTIALS",
+            404,
+            "Casino padre no encontrado",
+          );
+        }
+        if (
+          casino.dealerIds.length > 0 &&
+          !casino.dealerIds.includes(user.id)
+        ) {
+          throw new AuthError(
+            "INSUFFICIENT_ROLE",
+            400,
+            "Ese tallador no está asignado a este casino",
           );
         }
         patch.talladorId = user.id;

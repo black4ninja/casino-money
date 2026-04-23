@@ -11,6 +11,12 @@ type Props = {
   dealers: AuthUser[];
   /** Current assignment — shown pre-highlighted and enables "Quitar". */
   currentTalladorId: string | null;
+  /**
+   * When provided (non-empty), restricts the pickable dealers to this subset
+   * — used to enforce that mesas only accept dealers already assigned to
+   * the parent casino. An empty / undefined value means "no restriction".
+   */
+  allowedDealerIds?: string[];
   /** Submit handler. `null` = unassign. */
   onSubmit: (talladorId: string | null) => Promise<void>;
   onCancel: () => void;
@@ -27,6 +33,7 @@ type Props = {
 export function AssignTalladorForm({
   dealers,
   currentTalladorId,
+  allowedDealerIds,
   onSubmit,
   onCancel,
   loading,
@@ -35,16 +42,25 @@ export function AssignTalladorForm({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(currentTalladorId);
 
+  const restricted = Boolean(allowedDealerIds && allowedDealerIds.length > 0);
+  const allowedSet = useMemo(
+    () => new Set(allowedDealerIds ?? []),
+    [allowedDealerIds],
+  );
+
   const filtered = useMemo(() => {
     const active = dealers.filter((d) => d.active);
+    const scoped = restricted
+      ? active.filter((d) => allowedSet.has(d.id))
+      : active;
     const needle = query.trim().toLowerCase();
-    if (!needle) return active;
-    return active.filter((d) => {
+    if (!needle) return scoped;
+    return scoped.filter((d) => {
       const name = (d.fullName ?? "").toLowerCase();
       const mat = d.matricula.toLowerCase();
       return name.includes(needle) || mat.includes(needle);
     });
-  }, [dealers, query]);
+  }, [dealers, query, restricted, allowedSet]);
 
   const dirty = selected !== currentTalladorId;
 
@@ -86,7 +102,9 @@ export function AssignTalladorForm({
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">
               {dealers.length === 0
                 ? "No hay talladores registrados en el sistema."
-                : "Sin coincidencias."}
+                : restricted
+                  ? "Este casino aún no tiene talladores asignados. Ve a la sección de talladores del casino para agregarlos."
+                  : "Sin coincidencias."}
             </p>
           ) : (
             filtered.map((d) => {

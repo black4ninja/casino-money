@@ -9,10 +9,12 @@ export function userRoutes(
 ): Router {
   const router = Router();
   router.use(requireAuthMiddleware, requireMasterMiddleware);
+  // Register literal sub-paths (players/departamentos, :collection/bulk)
+  // BEFORE the generic /:collection routes so Express doesn't treat
+  // "departamentos" / "bulk" as collection names or ids.
+  router.get("/players/departamentos", ctrl.listDepartamentos);
   router.get("/:collection", ctrl.listByCollection);
   router.post("/:collection", ctrl.createInCollection);
-  // Bulk endpoint must be registered before the /:id routes so Express doesn't
-  // treat "bulk" as an id.
   router.post("/:collection/bulk", ctrl.bulkImportPlayers);
   router.patch("/:collection/:id", ctrl.updateInCollection);
   router.post("/:collection/:id/archive", ctrl.archiveInCollection);

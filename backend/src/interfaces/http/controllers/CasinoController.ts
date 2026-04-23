@@ -4,6 +4,7 @@ import type { ListCasinosUseCase } from "../../../application/use-cases/ListCasi
 import type { UpdateCasinoUseCase } from "../../../application/use-cases/UpdateCasino.js";
 import type { SetCasinoActiveUseCase } from "../../../application/use-cases/SetCasinoActive.js";
 import type { DeleteCasinoUseCase } from "../../../application/use-cases/DeleteCasino.js";
+import type { ListCasinoPlayersUseCase } from "../../../application/use-cases/ListCasinoPlayers.js";
 import type { CasinoRepo } from "../../../domain/ports/CasinoRepo.js";
 
 function resolveId(req: Request): string | null {
@@ -30,6 +31,7 @@ export class CasinoController {
     private readonly updateCasino: UpdateCasinoUseCase,
     private readonly setCasinoActive: SetCasinoActiveUseCase,
     private readonly deleteCasino: DeleteCasinoUseCase,
+    private readonly listCasinoPlayers: ListCasinoPlayersUseCase,
     private readonly casinos: CasinoRepo,
   ) {}
 
@@ -86,18 +88,62 @@ export class CasinoController {
         res.status(400).json({ status: "error", message: "id required" });
         return;
       }
-      const { name, date } = req.body ?? {};
+      const { name, date, departamentos, dealerIds } = req.body ?? {};
       const parsedDate = date === undefined ? undefined : parseDate(date);
       if (date !== undefined && !parsedDate) {
         res.status(400).json({ status: "error", message: "invalid date" });
         return;
       }
+      let departamentosPatch: string[] | undefined;
+      if (departamentos !== undefined) {
+        if (!Array.isArray(departamentos)) {
+          res
+            .status(400)
+            .json({ status: "error", message: "departamentos must be an array" });
+          return;
+        }
+        departamentosPatch = departamentos.filter(
+          (d: unknown): d is string => typeof d === "string",
+        );
+      }
+      let dealerIdsPatch: string[] | undefined;
+      if (dealerIds !== undefined) {
+        if (!Array.isArray(dealerIds)) {
+          res
+            .status(400)
+            .json({ status: "error", message: "dealerIds must be an array" });
+          return;
+        }
+        dealerIdsPatch = dealerIds.filter(
+          (d: unknown): d is string => typeof d === "string",
+        );
+      }
       const casino = await this.updateCasino.execute({
         casinoId: id,
         name: typeof name === "string" ? name : undefined,
         date: parsedDate ?? undefined,
+        departamentos: departamentosPatch,
+        dealerIds: dealerIdsPatch,
       });
       res.json({ casino: casino.toPublic() });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /casinos/:id/players — materializes the roster from the casino's
+   * `departamentos` list. An empty list returns `[]`.
+   */
+  listPlayers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = resolveId(req);
+      if (!id) {
+        res.status(400).json({ status: "error", message: "id required" });
+        return;
+      }
+      const players = await this.listCasinoPlayers.execute(id);
+      res.json({ players: players.map((p) => p.toPublic()) });
     } catch (err) {
       next(err);
     }

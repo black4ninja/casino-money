@@ -132,6 +132,22 @@ export async function apiDeleteMesa(
 }
 
 /**
+ * Active mesas of a casino the current player is allowed to play in. The
+ * backend enforces the same departamento rule as `/me/casinos` — players
+ * who don't belong get an empty list. Archived / deleted mesas never show.
+ */
+export async function apiListMyCasinoMesas(
+  accessToken: string,
+  casinoId: string,
+): Promise<{ mesas: Mesa[] }> {
+  const res = await fetch(`${BASE}/me/casinos/${casinoId}/mesas`, {
+    headers: authedHeaders(accessToken),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
  * Mesas assigned to the current authenticated user (as tallador). Used by
  * the dealer home page to show what table they're running. Masters will
  * normally get an empty list since admins don't deal tables.

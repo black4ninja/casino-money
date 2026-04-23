@@ -14,8 +14,11 @@ import AdminRoster from "./pages/admin/AdminRoster";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCasinos from "./pages/admin/AdminCasinos";
 import AdminCasinoDetail from "./pages/admin/AdminCasinoDetail";
+import AdminCasinoEconomy from "./pages/admin/AdminCasinoEconomy";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import PlayerHome from "./pages/player/PlayerHome";
+import PlayerMesaView from "./pages/player/PlayerMesaView";
+import PlayerSlots from "./pages/player/PlayerSlots";
 import PlayerWallet from "./pages/player/PlayerWallet";
 import PlayerIdentity from "./pages/player/PlayerIdentity";
 import PlayerReceive from "./pages/player/PlayerReceive";
@@ -31,6 +34,7 @@ import DealerDashboard from "./pages/dealer/DealerDashboard";
 import DealerMesaView from "./pages/dealer/DealerMesaView";
 import { ProtectedRoute } from "@/components/templates/ProtectedRoute";
 import { DealerShell } from "@/components/templates/DealerShell";
+import { PlayerShell } from "@/components/templates/PlayerShell";
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -83,6 +87,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/casinos/:id/economy"
+        element={
+          <ProtectedRoute allowedRoles={["master"]}>
+            <AdminCasinoEconomy />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Casino-session management — unprotected per current scope. */}
       <Route path="/admin/session" element={<AdminSession />} />
@@ -90,22 +102,50 @@ export default function App() {
       <Route path="/admin/caja" element={<AdminCaja />} />
       <Route path="/admin/roster" element={<AdminRoster />} />
 
-      {/* Player area — master may also access. */}
-      <Route
-        path="/player"
-        element={
-          <ProtectedRoute allowedRoles={["player", "master"]}>
-            <PlayerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/player/home" element={<PlayerHome />} />
-      <Route path="/player/wallet" element={<PlayerWallet />} />
-      <Route path="/player/identity" element={<PlayerIdentity />} />
-      <Route path="/player/receive" element={<PlayerReceive />} />
-      <Route path="/player/pay" element={<PlayerPay />} />
-      <Route path="/player/transfer" element={<PlayerTransfer />} />
-      <Route path="/player/history" element={<PlayerHistory />} />
+      {/* Player area — master may also access. PlayerShell renders the handbook
+          FAB + modal on every /player/* route so the pocket reference is
+          always one tap away. Legacy /player/home still bounces to /player. */}
+      <Route path="/player/home" element={<Navigate to="/player" replace />} />
+      <Route element={<PlayerShell />}>
+        <Route
+          path="/player"
+          element={
+            <ProtectedRoute allowedRoles={["player", "master"]}>
+              <PlayerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/player/casino/:casinoId"
+          element={
+            <ProtectedRoute allowedRoles={["player", "master"]}>
+              <PlayerHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/player/casino/:casinoId/mesa/:mesaId"
+          element={
+            <ProtectedRoute allowedRoles={["player", "master"]}>
+              <PlayerMesaView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/player/casino/:casinoId/slots"
+          element={
+            <ProtectedRoute allowedRoles={["player", "master"]}>
+              <PlayerSlots />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/player/wallet" element={<PlayerWallet />} />
+        <Route path="/player/identity" element={<PlayerIdentity />} />
+        <Route path="/player/receive" element={<PlayerReceive />} />
+        <Route path="/player/pay" element={<PlayerPay />} />
+        <Route path="/player/transfer" element={<PlayerTransfer />} />
+        <Route path="/player/history" element={<PlayerHistory />} />
+      </Route>
 
       {/* Dealer area — nested under DealerShell so every /dealer/* page
           inherits the landing-style background. Master may also access

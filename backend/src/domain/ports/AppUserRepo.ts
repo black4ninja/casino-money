@@ -14,6 +14,8 @@ export type UpdateAppUserInput = {
   fullName?: string | null;
   /** If provided, overwrites departamento (empty string → null). Player-only. */
   departamento?: string | null;
+  /** If provided, overwrites alias (empty string → null). Player-only. */
+  alias?: string | null;
   /** If provided, replaces the stored password hash. */
   passwordHash?: string;
 };
@@ -30,6 +32,18 @@ export interface AppUserRepo {
   create(input: CreateAppUserInput): Promise<AppUser>;
   /** Masters listing — includes archived (active=false), excludes deleted. */
   listByRole(role: Role): Promise<AppUser[]>;
+  /**
+   * Active players whose `departamento` is in the given list. Archived or
+   * deleted rows are excluded — used to materialize the roster of a casino
+   * from its `departamentos` array.
+   */
+  listActivePlayersByDepartamentos(departamentos: string[]): Promise<AppUser[]>;
+  /**
+   * Unique `departamento` values across active players. Used by the admin UI
+   * to build the multi-select of available departments when assigning them
+   * to a casino.
+   */
+  listPlayerDepartamentos(): Promise<string[]>;
   update(id: string, patch: UpdateAppUserInput): Promise<AppUser>;
   /** Archive / unarchive — flips `active`. Does not touch `exists`. */
   setActive(id: string, active: boolean): Promise<AppUser>;

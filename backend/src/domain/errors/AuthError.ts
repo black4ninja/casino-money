@@ -6,7 +6,9 @@ export type AuthErrorCode =
   | "INSUFFICIENT_ROLE"
   | "MATRICULA_TAKEN"
   | "INACTIVE_ACCOUNT"
-  | "PASSWORD_REQUIRED";
+  | "PASSWORD_REQUIRED"
+  | "CASINO_ARCHIVED"
+  | "VALIDATION";
 
 export class AuthError extends Error {
   readonly status: number;
@@ -41,5 +43,15 @@ export class AuthError extends Error {
   }
   static passwordRequired() {
     return new AuthError("PASSWORD_REQUIRED", 400, "Password required");
+  }
+  static casinoArchived() {
+    return new AuthError(
+      "CASINO_ARCHIVED",
+      409,
+      "Casino is archived — reactivate it before crediting",
+    );
+  }
+  static validation(message: string) {
+    return new AuthError("VALIDATION", 400, message);
   }
 }

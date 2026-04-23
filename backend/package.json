@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "migrate:pointers": "tsx src/infrastructure/parse/migrations/migrate_pointers.ts"
+    "migrate:pointers": "tsx src/infrastructure/parse/migrations/migrate_pointers.ts",
+    "migrate:casino-dealers": "tsx src/infrastructure/parse/migrations/backfill_casino_dealers.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

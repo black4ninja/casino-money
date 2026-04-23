@@ -8,6 +8,7 @@ import type {
   BulkCreatePlayersUseCase,
   BulkPlayerRow,
 } from "../../../application/use-cases/BulkCreatePlayers.js";
+import type { ListPlayerDepartamentosUseCase } from "../../../application/use-cases/ListPlayerDepartamentos.js";
 import type { Role } from "../../../domain/entities/Role.js";
 
 const COLLECTION_TO_ROLE: Record<string, Role> = {
@@ -35,7 +36,26 @@ export class UserController {
     private readonly setUserActive: SetUserActiveUseCase,
     private readonly deleteUser: DeleteUserUseCase,
     private readonly bulkCreatePlayers: BulkCreatePlayersUseCase,
+    private readonly listPlayerDepartamentos: ListPlayerDepartamentosUseCase,
   ) {}
+
+  /**
+   * GET /users/players/departamentos — sorted, deduplicated list of
+   * departamento values across active players. Used to populate the
+   * casino-detail multi-select when assigning departments.
+   */
+  listDepartamentos = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const departamentos = await this.listPlayerDepartamentos.execute();
+      res.json({ departamentos });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   listByCollection = async (req: Request, res: Response, next: NextFunction) => {
     try {

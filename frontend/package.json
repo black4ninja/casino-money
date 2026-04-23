@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify": "vitest run --reporter=verbose scripts/verify.test.ts",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "optimize:patterns": "node scripts/optimize-patterns.mjs patterns",
+    "optimize:antipatterns": "node scripts/optimize-patterns.mjs antipatterns",
+    "optimize:static": "node scripts/optimize-static.mjs"
   },
   "dependencies": {
     "@noble/ed25519": "^2.1.0",
@@ -20,8 +23,11 @@
     "@types/pako": "^2.0.4",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
+    "embla-carousel-react": "^8.6.0",
+    "mermaid": "^11.14.0",
     "pako": "^2.1.0",
     "parse": "^8.6.0",
+    "prism-react-renderer": "^2.4.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -37,6 +43,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^25.0.1",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

@@ -19,6 +19,12 @@ type AuthState = {
   refresh: () => Promise<string>; // returns new access token
   hydrate: () => void;
   setFromRecord: (record: AuthRecord) => void;
+  /**
+   * Replaces the current user (e.g. after a self-service update like
+   * /me/alias) while keeping the existing tokens. Persists to storage so
+   * a reload sees the new value.
+   */
+  setUser: (user: AuthUser) => void;
 };
 
 const initial: Pick<AuthState, "user" | "accessToken" | "refreshToken" | "loading"> = {
@@ -51,6 +57,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: record.accessToken,
       refreshToken: record.refreshToken,
     });
+  },
+
+  setUser: (user) => {
+    const { accessToken, refreshToken } = get();
+    if (!accessToken || !refreshToken) {
+      set({ user });
+      return;
+    }
+    saveAuth({ user, accessToken, refreshToken });
+    set({ user });
   },
 
   login: async (matricula, password) => {

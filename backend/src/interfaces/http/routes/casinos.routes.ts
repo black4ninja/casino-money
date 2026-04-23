@@ -11,6 +11,7 @@ export function casinoRoutes(
   router.use(requireAuthMiddleware, requireMasterMiddleware);
   router.get("/", ctrl.list);
   router.get("/:id", ctrl.show);
+  router.get("/:id/players", ctrl.listPlayers);
   router.post("/", ctrl.create);
   router.patch("/:id", ctrl.update);
   router.post("/:id/archive", ctrl.archive);

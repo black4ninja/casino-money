@@ -54,3 +54,23 @@ export async function apiGetLastRouletteSpin(
   if (!res.ok) throw await parseError(res);
   return res.json();
 }
+
+/**
+ * Player-scoped read of the last spin at a mesa. Backend enforces that the
+ * caller is an active player whose `departamento` belongs to the casino's
+ * list, and that the mesa is actually part of that casino. Any failed
+ * check returns `spin: null` — the UI simply shows "no spins" instead of
+ * leaking whether data exists.
+ */
+export async function apiGetMyCasinoMesaLastSpin(
+  accessToken: string,
+  casinoId: string,
+  mesaId: string,
+): Promise<{ spin: RouletteSpin | null }> {
+  const res = await fetch(
+    `${BASE}/me/casinos/${casinoId}/mesas/${mesaId}/spin/last`,
+    { headers: authedHeaders(accessToken) },
+  );
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}

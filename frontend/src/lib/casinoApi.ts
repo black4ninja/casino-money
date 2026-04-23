@@ -1,5 +1,6 @@
 import { getBackendBaseURL } from "./parse";
 import type { ApiError } from "./authApi";
+import type { AuthUser } from "@/storage/auth";
 
 const BASE = `${getBackendBaseURL()}/api/v1`;
 
@@ -14,6 +15,16 @@ export type Casino = {
   name: string;
   /** ISO-8601 — stored/transported as UTC, rendered with the user's locale. */
   date: string;
+  /**
+   * Player department names assigned to this casino. Membership is dynamic:
+   * any active player whose `departamento` is in this list plays here.
+   */
+  departamentos: string[];
+  /**
+   * Dealers explicitly assigned to this casino. When non-empty, Mesa can
+   * only accept a tallador from this list.
+   */
+  dealerIds: string[];
   active: boolean;
   exists: boolean;
   createdAt: string;
@@ -75,12 +86,49 @@ export async function apiCreateCasino(
 export async function apiUpdateCasino(
   accessToken: string,
   id: string,
-  data: { name?: string; date?: string },
+  data: {
+    name?: string;
+    date?: string;
+    departamentos?: string[];
+    dealerIds?: string[];
+  },
 ): Promise<{ casino: Casino }> {
   const res = await fetch(`${BASE}/casinos/${id}`, {
     method: "PATCH",
     headers: authedHeaders(accessToken, true),
     body: JSON.stringify(data),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
+ * Casinos the caller (typically a player) is eligible to play in. A casino
+ * is included only if it is active, not soft-deleted, and its
+ * `departamentos` array contains the caller's `departamento`. Staff roles
+ * always get an empty list from this endpoint.
+ */
+export async function apiListMyCasinos(
+  accessToken: string,
+): Promise<{ casinos: Casino[] }> {
+  const res = await fetch(`${BASE}/me/casinos`, {
+    headers: authedHeaders(accessToken),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
+ * Materialized roster of the casino — all active players whose `departamento`
+ * is in `casino.departamentos`. Empty array means the casino has no players
+ * assigned yet.
+ */
+export async function apiListCasinoPlayers(
+  accessToken: string,
+  id: string,
+): Promise<{ players: AuthUser[] }> {
+  const res = await fetch(`${BASE}/casinos/${id}/players`, {
+    headers: authedHeaders(accessToken),
   });
   if (!res.ok) throw await parseError(res);
   return res.json();

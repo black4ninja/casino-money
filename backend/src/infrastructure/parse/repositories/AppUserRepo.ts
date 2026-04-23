@@ -21,6 +21,7 @@ function toEntity(obj: Parse.Object): AppUser {
     role,
     fullName: obj.get("fullName") ?? null,
     departamento: obj.get("departamento") ?? null,
+    alias: obj.get("alias") ?? null,
     active: obj.get("active") ?? true,
     // Default to true for legacy rows that predate the flag.
     exists: obj.get("exists") ?? true,
@@ -86,6 +87,7 @@ export class ParseAppUserRepo implements AppUserRepo {
     obj.set("role", input.role);
     obj.set("fullName", input.fullName);
     obj.set("departamento", input.departamento);
+    obj.set("alias", null);
     obj.set("active", true);
     obj.set("exists", true);
     await obj.save(null, { useMasterKey: true });
@@ -101,6 +103,47 @@ export class ParseAppUserRepo implements AppUserRepo {
     return results.map(toEntity);
   }
 
+  async listActivePlayersByDepartamentos(
+    departamentos: string[],
+  ): Promise<AppUser[]> {
+    const clean = Array.from(
+      new Set(
+        departamentos
+          .map((d) => (typeof d === "string" ? d.trim() : ""))
+          .filter((d) => d.length > 0),
+      ),
+    );
+    if (clean.length === 0) return [];
+    const results = await this.qAlive()
+      .equalTo("role", "player")
+      .equalTo("active", true)
+      .containedIn("departamento", clean)
+      .ascending("fullName")
+      .limit(1000)
+      .find({ useMasterKey: true });
+    return results.map(toEntity);
+  }
+
+  async listPlayerDepartamentos(): Promise<string[]> {
+    // Parse has no distinct op over non-master-key queries, so we pull the
+    // players and reduce locally. Player volume (<1000) makes this fine.
+    const results = await this.qAlive()
+      .equalTo("role", "player")
+      .equalTo("active", true)
+      .select("departamento")
+      .limit(1000)
+      .find({ useMasterKey: true });
+    const set = new Set<string>();
+    for (const obj of results) {
+      const d = obj.get("departamento");
+      if (typeof d === "string") {
+        const trimmed = d.trim();
+        if (trimmed) set.add(trimmed);
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }
+
   async update(id: string, patch: UpdateAppUserInput): Promise<AppUser> {
     const obj = await this.q().get(id, { useMasterKey: true });
     if (patch.fullName !== undefined) {
@@ -110,6 +153,10 @@ export class ParseAppUserRepo implements AppUserRepo {
     if (patch.departamento !== undefined) {
       const trimmed = patch.departamento?.trim();
       obj.set("departamento", trimmed ? trimmed : null);
+    }
+    if (patch.alias !== undefined) {
+      const trimmed = patch.alias?.trim();
+      obj.set("alias", trimmed ? trimmed : null);
     }
     if (patch.passwordHash !== undefined) {
       obj.set("passwordHash", patch.passwordHash);

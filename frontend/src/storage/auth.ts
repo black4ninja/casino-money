@@ -14,6 +14,12 @@ export type AuthUser = {
    */
   departamento: string | null;
   /**
+   * Player-chosen display name used inside the game. Independent from
+   * `fullName` (the school-of-record identity). Null when the player has
+   * not set one; the UI falls back to fullName / matricula in that case.
+   */
+  alias: string | null;
+  /**
    * Lifecycle flags (shared across every admin-managed entity in the app):
    *   active = false  → archived; cannot log in or perform actions.
    *   exists = false  → soft-deleted; hidden from every listing.

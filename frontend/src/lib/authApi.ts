@@ -180,6 +180,41 @@ export type BulkImportResponse = {
  * independently and returns a per-row report; a partial failure does not
  * abort the whole batch.
  */
+/**
+ * Self-service alias update for the current player. Pass `null` or empty
+ * string to clear the alias (UI then falls back to fullName / matricula).
+ * Returns the updated user so callers can refresh their store.
+ */
+export async function apiUpdateMyAlias(
+  accessToken: string,
+  alias: string | null,
+): Promise<{ user: AuthUser }> {
+  const res = await fetch(`${BASE}/me/alias`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ alias }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
+ * Sorted, deduplicated list of `departamento` values currently in use by
+ * active players. Used by the casino-detail multi-select.
+ */
+export async function apiListPlayerDepartamentos(
+  accessToken: string,
+): Promise<{ departamentos: string[] }> {
+  const res = await fetch(`${BASE}/users/players/departamentos`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
 export async function apiBulkImportPlayers(
   accessToken: string,
   players: BulkImportPlayerRow[],
