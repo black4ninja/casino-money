@@ -89,9 +89,12 @@ export function SidebarItem({
   // Padding and gap adapt to mode: rail tile is a square-ish chip, expanded
   // is a wide row. Switching utility classes (not conditional nodes) keeps
   // the CSS width transition smooth.
+  // `!` prefix forces the padding via !important — needed because React
+  // Router's <Link> (rendered as <a>) was inheriting weird preflight rules
+  // that ate the utility padding, while <button> (logout) rendered fine.
   const layout = collapsed
-    ? "justify-center gap-0 px-3 py-3.5"
-    : "gap-3 px-4 py-3.5";
+    ? "justify-center gap-0 !px-3 !py-3.5"
+    : "gap-3 !pl-5 !pr-4 !py-3";
   const finalCls = [BASE, layout, active ? style.active : style.inactive].join(" ");
 
   // Native tooltip covers keyboard users as well as hover — delay is browser-

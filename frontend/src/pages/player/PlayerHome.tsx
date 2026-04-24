@@ -1,34 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
 import { Badge } from "@/components/atoms/Badge";
+import { Balance } from "@/components/atoms/Balance";
 import { useAuthStore } from "@/stores/authStore";
-import { apiUpdateMyAlias, type ApiError } from "@/lib/authApi";
+import type { ApiError } from "@/lib/authApi";
 import { apiListMyCasinos, type Casino } from "@/lib/casinoApi";
 import { apiListMyCasinoMesas, type Mesa } from "@/lib/mesaApi";
+import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
 import { findGame, gameLabel } from "@/domain/games";
 
 /**
  * /player/casino/:casinoId — the player has already authenticated and picked
- * a casino in /player, so we no longer ask them to scan a session QR or type
- * a session code: we know who they are and where they are. The casino id
- * lives in the URL so the page is refreshable, shareable, and doesn't rely
- * on React Router state that would be lost on reload.
- *
- * The player CAN still edit their alias (playful in-game name), which now
- * persists to the backend as `AppUser.alias` via PATCH /me/alias — separate
- * from the school-of-record `fullName`.
+ * a casino in /player. Alias editing lives in /player (the dashboard) so it's
+ * a global setting, not per-casino.
  */
 export default function PlayerHome() {
   const navigate = useNavigate();
   const { casinoId } = useParams<{ casinoId: string }>();
-  const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const refresh = useAuthStore((s) => s.refresh);
-  const setUser = useAuthStore((s) => s.setUser);
 
   const [casino, setCasino] = useState<Casino | null>(null);
   const [casinoLoading, setCasinoLoading] = useState(true);
@@ -37,15 +30,8 @@ export default function PlayerHome() {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [mesasLoading, setMesasLoading] = useState(true);
 
-  const [alias, setAlias] = useState(user?.alias ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-
-  // Sync input with store updates (e.g. another tab saved a new alias).
-  useEffect(() => {
-    setAlias(user?.alias ?? "");
-  }, [user?.alias]);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -123,29 +109,29 @@ export default function PlayerHome() {
     };
   }, [casinoId, casino, withAuth]);
 
-  const trimmed = alias.trim();
-  const currentAlias = user?.alias ?? "";
-  const dirty = trimmed !== currentAlias;
-  const aliasInvalid = trimmed.length > 0 && trimmed.length < 2;
-
-  async function handleSaveAlias() {
-    if (saving || !dirty || aliasInvalid) return;
-    setSaving(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const { user: updated } = await withAuth((t) =>
-        apiUpdateMyAlias(t, trimmed.length === 0 ? null : trimmed),
-      );
-      setUser(updated);
-      setInfo(trimmed.length === 0 ? "Alias removido" : "Alias actualizado");
-    } catch (err) {
-      const e = err as ApiError;
-      setError(e.message ?? "No se pudo actualizar el alias");
-    } finally {
-      setSaving(false);
-    }
-  }
+  // Load wallet balance for this casino. Reusa el endpoint /me/.../slots/wallet
+  // que devuelve el saldo del jugador en este casino (fuente única para
+  // cualquier juego que consuma/acredite fichas vía wallet).
+  useEffect(() => {
+    if (!casinoId || !casino) return;
+    let cancelled = false;
+    (async () => {
+      setBalanceLoading(true);
+      try {
+        const wallet = await withAuth((t) =>
+          apiGetMyCasinoSlotWallet(t, casinoId),
+        );
+        if (!cancelled) setBalance(wallet.balance);
+      } catch {
+        if (!cancelled) setBalance(0);
+      } finally {
+        if (!cancelled) setBalanceLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [casinoId, casino, withAuth]);
 
   function handleEnterMesa(m: Mesa) {
     if (!casino) return;
@@ -154,18 +140,13 @@ export default function PlayerHome() {
     navigate(`/player/casino/${casino.id}/mesa/${m.id}`);
   }
 
-  const displayName = useMemo(
-    () => currentAlias || user?.fullName || user?.matricula || "Jugador",
-    [currentAlias, user?.fullName, user?.matricula],
-  );
-
   const title = casino?.name ?? (casinoLoading ? "Cargando…" : "Casino");
 
   return (
     <AppLayout
       title={title}
       subtitle={casino ? "Tu casino de esta noche" : undefined}
-      back={{ to: "/player", label: "Mis casinos" }}
+      back={{ to: "/player", label: "" }}
     >
       {casinoError && (
         <Card tone="night">
@@ -194,97 +175,34 @@ export default function PlayerHome() {
             <h2 className="font-display text-2xl text-[--color-ivory]">
               {casino.name}
             </h2>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-[--color-cream]/70">
-              <span className="font-mono">{user?.matricula}</span>
-              {user?.departamento && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>{user.departamento}</span>
-                </>
-              )}
-              <span aria-hidden>·</span>
-              <span className="text-[--color-gold-300]">{displayName}</span>
-            </div>
           </Card>
 
-          <Card tone="night" className="flex flex-col gap-3">
-            <div>
-              <h3 className="font-display text-xl text-[--color-ivory]">
-                Tu alias
-              </h3>
-              <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
-                Cómo quieres que te vean en la mesa. Se queda guardado para la
-                próxima vez que juegues.
-              </p>
-            </div>
-
-            <Input
-              value={alias}
-              onChange={(e) => {
-                setAlias(e.target.value);
-                setInfo(null);
-                setError(null);
-              }}
-              placeholder={user?.fullName ?? "Ej. Ana, Beto…"}
-              maxLength={24}
-              hint={
-                aliasInvalid
-                  ? undefined
-                  : "Mínimo 2 caracteres. Déjalo vacío para usar tu nombre."
-              }
-              error={aliasInvalid ? "Escribe al menos 2 caracteres" : undefined}
-            />
-
-            {error && (
-              <p
-                className="font-label text-xs tracking-wider text-[--color-carmine-400]"
-                role="alert"
-              >
-                {error}
-              </p>
-            )}
-            {info && !error && (
-              <p className="font-label text-xs tracking-wider text-[--color-gold-300]">
-                {info}
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="info"
-                size="sm"
-                onClick={handleSaveAlias}
-                disabled={saving || !dirty || aliasInvalid}
-              >
-                {saving ? "Guardando…" : "Guardar alias"}
-              </Button>
-              {currentAlias && alias === currentAlias && (
-                <span className="font-label text-xs tracking-widest text-[--color-cream]/50">
-                  Alias actual: {currentAlias}
-                </span>
-              )}
-            </div>
-          </Card>
-
-          <Card tone="night" className="flex flex-col gap-3">
-            <div>
-              <h3 className="font-display text-xl text-[--color-ivory]">
-                Diversión extra
-              </h3>
-              <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
-                Personal y en solitario — juega con tu saldo del casino.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
-              <span aria-hidden className="text-2xl leading-none shrink-0">
-                🎰
+          <Card tone="night" className="flex flex-col items-center gap-1 py-6">
+            <p className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/60">
+              TU SALDO EN ESTE CASINO
+            </p>
+            {balanceLoading && balance === null ? (
+              <span className="font-display text-3xl text-[--color-cream]/40">
+                …
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55">
-                  TRAGAMONEDAS
-                </div>
-                <div className="font-display text-lg text-[--color-ivory] truncate">
-                  Patrones & Anti-Patrones
+            ) : (
+              <Balance amount={balance ?? 0} size="lg" />
+            )}
+          </Card>
+
+          <Card tone="night" className="flex flex-col gap-3">
+            <h3 className="font-display text-xl text-[--color-ivory]">
+              Diversión extra
+            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span aria-hidden className="text-2xl leading-none shrink-0">
+                  🎰
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-lg text-[--color-ivory] truncate">
+                    Tragamonedas
+                  </div>
                 </div>
               </div>
               <Button
@@ -293,6 +211,7 @@ export default function PlayerHome() {
                 onClick={() =>
                   navigate(`/player/casino/${casino.id}/slots`)
                 }
+                className="w-full sm:w-auto"
               >
                 Jugar →
               </Button>
@@ -327,26 +246,29 @@ export default function PlayerHome() {
                   return (
                     <li
                       key={m.id}
-                      className="flex flex-wrap items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5"
+                      className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5"
                     >
-                      <span
-                        aria-hidden
-                        className="text-2xl leading-none shrink-0"
-                      >
-                        {emoji}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55">
-                          Mesa {i + 1}
-                        </div>
-                        <div className="font-display text-lg text-[--color-ivory] truncate">
-                          {gameLabel(m.gameType)}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span
+                          aria-hidden
+                          className="text-2xl leading-none shrink-0"
+                        >
+                          {emoji}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55">
+                            Mesa {i + 1}
+                          </div>
+                          <div className="font-display text-lg text-[--color-ivory] truncate">
+                            {gameLabel(m.gameType)}
+                          </div>
                         </div>
                       </div>
                       <Button
                         variant="onyx"
                         size="sm"
                         onClick={() => handleEnterMesa(m)}
+                        className="w-full sm:w-auto"
                       >
                         ¡A la mesa! →
                       </Button>

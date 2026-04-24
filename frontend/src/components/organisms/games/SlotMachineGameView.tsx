@@ -13,6 +13,7 @@ import { Badge } from "@/components/atoms/Badge";
 import { Balance } from "@/components/atoms/Balance";
 import { NeonBulb } from "@/components/atoms/NeonBulb";
 import { useAuthStore } from "@/stores/authStore";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   apiPlaySlotSpin,
   type SlotSpinResponse,
@@ -491,6 +492,8 @@ type SlotResultModalProps = {
 };
 
 function SlotResultModal({ response, onClose, onPlayAgain }: SlotResultModalProps) {
+  useBodyScrollLock(true);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();

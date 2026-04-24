@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type ConfirmTone = "danger" | "gold" | "info" | "primary" | "purple";
 
@@ -36,6 +37,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {

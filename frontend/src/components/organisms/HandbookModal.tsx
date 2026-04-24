@@ -8,6 +8,7 @@ import { ANTI_PATTERNS } from "@/domain/antiPatterns";
 import { PatternCard } from "../molecules/PatternCard";
 import { AntiPatternCard } from "../molecules/AntiPatternCard";
 import { PatternsDeck } from "./PatternsDeck";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Category = Exclude<PatternCategory, "zero">;
 type View =
@@ -69,6 +70,8 @@ const CATEGORY_BANNERS: Record<
 export function HandbookModal({ open, onClose }: Props) {
   const [view, setView] = useState<View>({ kind: "picker" });
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -114,7 +117,7 @@ export function HandbookModal({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8"
+      className="fixed inset-0 z-50 flex items-start justify-center px-3 py-4 sm:px-6 sm:py-8 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label="Manual de patrones"

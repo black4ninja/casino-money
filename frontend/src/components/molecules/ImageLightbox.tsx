@@ -7,6 +7,7 @@ import {
   type ReactNode,
   type TouchEvent as ReactTouchEvent,
 } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Props = {
   /**
@@ -52,6 +53,8 @@ export function ImageLightbox({ sources, alt, children, className }: Props) {
     setZoomed(false);
     setOrigin({ x: "50%", y: "50%" });
   }, []);
+
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open) return;

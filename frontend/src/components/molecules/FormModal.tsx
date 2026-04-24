@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Props = {
   open: boolean;
@@ -18,6 +19,8 @@ type Props = {
  * sizing container — no header/chrome of its own.
  */
 export function FormModal({ open, busy, onClose, children }: Props) {
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {

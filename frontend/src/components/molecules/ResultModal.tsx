@@ -3,6 +3,7 @@ import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { Badge } from "../atoms/Badge";
 import { NeonBulb } from "../atoms/NeonBulb";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   CATEGORY_LABEL,
   type DesignPattern,
@@ -28,6 +29,8 @@ type Props = {
  *  - No new keyframes added — all polish comes from existing animations.
  */
 export function ResultModal({ pattern, open, onClose, onSpinAgain }: Props) {
+  useBodyScrollLock(open);
+
   // ESC to close.
   useEffect(() => {
     if (!open) return;

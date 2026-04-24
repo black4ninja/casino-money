@@ -14,14 +14,23 @@ export function AppLayout({ children, title, subtitle, back, right }: Props) {
     <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-6 pb-10 pt-6 md:gap-8 md:pb-14 md:pt-10">
       <header className="flex items-center justify-between gap-3 px-4">
         <div className="flex items-center gap-3">
-          {back && (
-            <Link
-              to={back.to}
-              className="font-label rounded-full border border-[--color-gold-500]/40 px-3 py-1 text-xs text-[--color-cream]/80 hover:bg-white/5"
-            >
-              ← {back.label ?? "Volver"}
-            </Link>
-          )}
+          {back &&
+            (back.label === undefined || back.label.length > 0 ? (
+              <Link
+                to={back.to}
+                className="font-label rounded-full border border-[--color-gold-500]/40 px-3 py-1 text-xs text-[--color-cream]/80 hover:bg-white/5"
+              >
+                ← {back.label ?? "Volver"}
+              </Link>
+            ) : (
+              <Link
+                to={back.to}
+                aria-label="Volver"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[--color-gold-500]/40 text-sm text-[--color-cream]/80 hover:bg-white/5"
+              >
+                ←
+              </Link>
+            ))}
           <div>
             {title && (
               <h1 className="font-display text-3xl font-black gold-shine leading-none md:text-4xl">

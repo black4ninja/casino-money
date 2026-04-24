@@ -4,9 +4,10 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
+import { Input } from "@/components/atoms/Input";
 import { useAuthStore } from "@/stores/authStore";
 import { apiListMyCasinos, type Casino } from "@/lib/casinoApi";
-import type { ApiError } from "@/lib/authApi";
+import { apiUpdateMyAlias, type ApiError } from "@/lib/authApi";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -25,11 +26,22 @@ export default function PlayerDashboard() {
   const user = useAuthStore((s) => s.user);
   const refresh = useAuthStore((s) => s.refresh);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
 
   const [casinos, setCasinos] = useState<Casino[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [alias, setAlias] = useState(user?.alias ?? "");
+  const [savingAlias, setSavingAlias] = useState(false);
+  const [aliasError, setAliasError] = useState<string | null>(null);
+  const [aliasInfo, setAliasInfo] = useState<string | null>(null);
+
+  // Sync input with store updates (e.g. another tab saved a new alias).
+  useEffect(() => {
+    setAlias(user?.alias ?? "");
+  }, [user?.alias]);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -64,20 +76,42 @@ export default function PlayerDashboard() {
     loadCasinos();
   }, [loadCasinos]);
 
+  const trimmedAlias = alias.trim();
+  const currentAlias = user?.alias ?? "";
+  const aliasDirty = trimmedAlias !== currentAlias;
+  const aliasInvalid = trimmedAlias.length > 0 && trimmedAlias.length < 2;
+
+  async function handleSaveAlias() {
+    if (savingAlias || !aliasDirty || aliasInvalid) return;
+    setSavingAlias(true);
+    setAliasError(null);
+    setAliasInfo(null);
+    try {
+      const { user: updated } = await withAuth((t) =>
+        apiUpdateMyAlias(
+          t,
+          trimmedAlias.length === 0 ? null : trimmedAlias,
+        ),
+      );
+      setUser(updated);
+      setAliasInfo(
+        trimmedAlias.length === 0 ? "Alias removido" : "Alias actualizado",
+      );
+    } catch (err) {
+      const e = err as ApiError;
+      setAliasError(e.message ?? "No se pudo actualizar el alias");
+    } finally {
+      setSavingAlias(false);
+    }
+  }
+
   async function handleLogout() {
     await logout();
     navigate("/", { replace: true });
   }
 
   return (
-    <AppLayout
-      title="Jugador"
-      right={
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
-          Salir
-        </Button>
-      }
-    >
+    <AppLayout title="Jugador">
       <div className="flex flex-col gap-4">
         <Card tone="felt">
           <div className="flex flex-col gap-2">
@@ -98,61 +132,112 @@ export default function PlayerDashboard() {
         </Card>
 
         <Card tone="night" className="flex flex-col gap-3">
-          <div>
-            <h3 className="font-display text-xl text-[--color-ivory]">
-              Mis casinos
-            </h3>
-            <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
-              {loading
-                ? "Cargando…"
-                : `${casinos.length} evento(s) disponible(s)`}
-            </p>
-          </div>
+          <h3 className="font-display text-xl text-[--color-ivory]">
+            Tu alias
+          </h3>
 
-          {error && (
+          <Input
+            value={alias}
+            onChange={(e) => {
+              setAlias(e.target.value);
+              setAliasInfo(null);
+              setAliasError(null);
+            }}
+            placeholder={user?.fullName ?? "Ej. Ana, Beto…"}
+            maxLength={24}
+            error={aliasInvalid ? "Escribe al menos 2 caracteres" : undefined}
+          />
+
+          {aliasError && (
             <p
               className="font-label text-xs tracking-wider text-[--color-carmine-400]"
               role="alert"
             >
-              {error}
+              {aliasError}
+            </p>
+          )}
+          {aliasInfo && !aliasError && (
+            <p className="font-label text-xs tracking-wider text-[--color-gold-300]">
+              {aliasInfo}
             </p>
           )}
 
-          {!loading && !error && casinos.length === 0 && (
+          <Button
+            variant="info"
+            size="sm"
+            onClick={handleSaveAlias}
+            disabled={savingAlias || !aliasDirty || aliasInvalid}
+            className="w-full sm:w-auto sm:self-start"
+          >
+            {savingAlias ? "Guardando…" : "Guardar alias"}
+          </Button>
+        </Card>
+
+        <div className="flex flex-col gap-3 px-4">
+          <h3 className="font-display text-xl text-[--color-ivory]">
+            Mis casinos
+          </h3>
+          <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+            {loading
+              ? "Cargando…"
+              : `${casinos.length} evento(s) disponible(s)`}
+          </p>
+        </div>
+
+        {error && (
+          <p
+            className="font-label text-xs tracking-wider text-[--color-carmine-400] px-4"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {!loading && !error && casinos.length === 0 && (
+          <Card tone="night">
             <p className="font-label text-sm text-[--color-cream]/70">
               {user?.departamento
                 ? `Aún no hay casinos disponibles para ${user.departamento}. Revisa más tarde.`
                 : "Tu cuenta no tiene un departamento asignado; pide a tu maestro que lo configure para ver casinos."}
             </p>
-          )}
+          </Card>
+        )}
 
-          {casinos.length > 0 && (
-            <ul className="flex flex-col gap-2">
-              {casinos.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex flex-wrap items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display text-lg text-[--color-ivory] truncate">
-                      {c.name}
-                    </div>
-                    <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55 mt-0.5">
-                      {formatDate(c.date)}
-                    </div>
-                  </div>
-                  <Button
-                    variant="onyx"
-                    size="sm"
-                    onClick={() => navigate(`/player/casino/${c.id}`)}
-                  >
-                    ¡A la mesa! →
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {casinos.map((c) => (
+          <Card
+            key={c.id}
+            tone="night"
+            className="flex flex-col sm:flex-row sm:items-center gap-3"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="font-display text-lg text-[--color-ivory] truncate">
+                {c.name}
+              </div>
+              <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55 mt-0.5">
+                {formatDate(c.date)}
+              </div>
+            </div>
+            <Button
+              variant="onyx"
+              size="sm"
+              onClick={() => navigate(`/player/casino/${c.id}`)}
+              className="w-full sm:w-auto"
+            >
+              ¡Pasa al salón! →
+            </Button>
+          </Card>
+        ))}
+
+        <div className="mt-8 px-4 pb-4">
+          <Button
+            variant="danger"
+            size="md"
+            block
+            onClick={handleLogout}
+          >
+            Cerrar sesión
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );

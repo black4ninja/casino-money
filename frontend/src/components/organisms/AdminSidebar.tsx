@@ -148,17 +148,18 @@ export function AdminSidebar({ active, collapsed, onToggle }: Props) {
             to="/admin/casinos"
             icon="★"
             label="Casinos"
-            hint="Eventos y partidas"
             active={active === "casinos"}
             collapsed={collapsed}
           />
         </nav>
       </div>
 
-      {/* Logout pinned to bottom */}
+      {/* Logout — pinned to bottom on desktop (mt-auto fills the tall
+          sidebar), forced ~2rem breathing room on mobile where the sidebar
+          is content-height and mt-auto has nothing to do. */}
       <div
         className={[
-          "mt-auto pt-4 border-t border-[--color-gold-500]/15",
+          "mt-14 md:mt-auto",
           collapsed ? "" : "",
         ].join(" ")}
       >
