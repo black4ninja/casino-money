@@ -328,6 +328,25 @@ button {
 }
 
 /*
+ * Coin-flip — giro corto del medallón de Pattern Casino en la landing.
+ * Alineado con el efecto de sonido "moneda" (1s): dos vueltas completas
+ * (720deg) con ease-out para que el giro frene con el fade del sonido.
+ */
+@keyframes coin-flip {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(720deg);
+  }
+}
+
+.animate-coin-flip {
+  animation: coin-flip 1s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
+  backface-visibility: visible;
+}
+
+/*
  * Shared landing background. AVIF is served to browsers that support it
  * (Safari 16+, Chrome/Edge/Firefox modern), WebP covers the rest. The
  * first `background-image` declaration is a hard fallback for ancient
