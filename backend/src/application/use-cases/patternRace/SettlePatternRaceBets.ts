@@ -1,6 +1,7 @@
 import type { PatternRaceBetRepo } from "../../../domain/ports/PatternRaceBetRepo.js";
 import type { WalletRepo } from "../../../domain/ports/WalletRepo.js";
 import type { WalletTransactionRepo } from "../../../domain/ports/WalletTransactionRepo.js";
+import type { CasinoEventRepo } from "../../../domain/ports/CasinoEventRepo.js";
 import type { PatternRaceBet } from "../../../domain/entities/PatternRaceBet.js";
 import {
   podiumMultiplierForBonus,
@@ -8,6 +9,10 @@ import {
 } from "../../../domain/entities/patternRace/patternCatalog.js";
 import { computeRace, type RaceContestant } from "./computeRace.js";
 import { creditPlayerCore } from "../helpers/creditPlayerCore.js";
+import {
+  applyCasinoEventMultiplier,
+  annotateNoteWithEvents,
+} from "../helpers/applyCasinoEventMultiplier.js";
 
 export type SettlePatternRaceBetsInput = {
   casinoId: string;
@@ -37,6 +42,7 @@ export class SettlePatternRaceBetsUseCase {
     private readonly wallets: WalletRepo,
     private readonly walletTxs: WalletTransactionRepo,
     private readonly bets: PatternRaceBetRepo,
+    private readonly casinoEvents: CasinoEventRepo,
   ) {}
 
   async execute(
@@ -53,6 +59,14 @@ export class SettlePatternRaceBetsUseCase {
     const blueprint = computeRace(input.casinoId, input.cycleIndex);
     const byPattern = new Map<string, RaceContestant>();
     for (const c of blueprint.contestants) byPattern.set(c.patternId, c);
+
+    // Lee una sola vez los eventos activos del casino para aplicar el mismo
+    // estado a todas las apuestas del ciclo — evita race donde el admin
+    // desactive CARRERA_DOUBLE a mitad del settle y unos ganadores cobren
+    // doble y otros no.
+    const activeEvents = await this.casinoEvents.listActiveByCasino(
+      input.casinoId,
+    );
 
     let won = 0;
     let lost = 0;
@@ -88,11 +102,27 @@ export class SettlePatternRaceBetsUseCase {
         bet.kind === "win"
           ? winMultiplierForBonus(contestant.bonus, isAnti)
           : podiumMultiplierForBonus(contestant.bonus, isAnti);
-      const payout = Math.max(0, Math.round(bet.amount * multiplier));
+      const basePayout = Math.max(0, Math.round(bet.amount * multiplier));
+
+      // Aplica CARRERA_DOUBLE si está activo. El `payout` persistido en la
+      // apuesta refleja el monto final (boosted) para que la historia del
+      // jugador muestre lo que realmente recibió.
+      const boosted = applyCasinoEventMultiplier(
+        activeEvents,
+        "carrera_payout",
+        basePayout,
+      );
+      const payout = boosted.amount;
 
       // Crédito idempotente con su propio key suffix; usamos el betBatchId
       // como batchId base para trazabilidad y un suffix propio para distinguir
       // del débito original.
+      const baseNote = `carrera payout ${multiplier}x (${bet.kind}) cycle=${bet.cycleIndex} winner=${contestant.patternId}`;
+      const noteWithEvents = annotateNoteWithEvents(
+        baseNote,
+        boosted.appliedEventNames,
+        boosted.multiplier,
+      );
       const credit = await creditPlayerCore(
         { wallets: this.wallets, walletTxs: this.walletTxs },
         {
@@ -101,7 +131,7 @@ export class SettlePatternRaceBetsUseCase {
           amount: payout,
           batchId: bet.betBatchId,
           actorId: bet.playerId,
-          note: `carrera payout ${multiplier}x (${bet.kind}) cycle=${bet.cycleIndex} winner=${contestant.patternId}`,
+          note: noteWithEvents,
           kind: "carrera_payout",
           keySuffix: "payout",
         },

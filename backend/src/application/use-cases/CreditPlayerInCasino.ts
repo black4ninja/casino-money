@@ -1,5 +1,6 @@
 import type { AppUserRepo } from "../../domain/ports/AppUserRepo.js";
 import type { CasinoRepo } from "../../domain/ports/CasinoRepo.js";
+import type { CasinoEventRepo } from "../../domain/ports/CasinoEventRepo.js";
 import type { WalletRepo } from "../../domain/ports/WalletRepo.js";
 import type { WalletTransactionRepo } from "../../domain/ports/WalletTransactionRepo.js";
 import { AuthError } from "../../domain/errors/AuthError.js";
@@ -9,6 +10,10 @@ import {
   validateBatchId,
   type CreditPlayerOutcome,
 } from "./helpers/creditPlayerCore.js";
+import {
+  applyCasinoEventMultiplier,
+  annotateNoteWithEvents,
+} from "./helpers/applyCasinoEventMultiplier.js";
 
 export type CreditPlayerInCasinoInput = {
   casinoId: string;
@@ -21,7 +26,12 @@ export type CreditPlayerInCasinoInput = {
 
 export type CreditPlayerInCasinoResult = {
   batchId: string;
+  /** Monto ingresado por el admin/dealer (antes de multiplicadores). */
   amount: number;
+  /** Monto efectivamente acreditado al jugador (post-multiplicador). */
+  effectiveAmount: number;
+  /** Nombres de eventos que duplicaron el monto, si hubo. */
+  appliedEvents: string[];
   playerId: string;
   outcome: CreditPlayerOutcome;
 };
@@ -37,6 +47,7 @@ export class CreditPlayerInCasinoUseCase {
     private readonly users: AppUserRepo,
     private readonly wallets: WalletRepo,
     private readonly walletTxs: WalletTransactionRepo,
+    private readonly casinoEvents: CasinoEventRepo,
   ) {}
 
   async execute(
@@ -71,15 +82,33 @@ export class CreditPlayerInCasinoUseCase {
     }
 
     const trimmedBatchId = input.batchId.trim();
+
+    // Multiplicador por evento activo (WIN_DOUBLE duplica depósitos). El
+    // monto validado es el ingresado; el efectivo puede superar MAX_AMOUNT
+    // cuando el evento lo duplica — aceptamos eso como parte del efecto.
+    const activeEvents = await this.casinoEvents.listActiveByCasino(
+      input.casinoId,
+    );
+    const boosted = applyCasinoEventMultiplier(
+      activeEvents,
+      "player_deposit",
+      input.amount,
+    );
+    const noteWithEvents = annotateNoteWithEvents(
+      input.note,
+      boosted.appliedEventNames,
+      boosted.multiplier,
+    );
+
     const outcome = await creditPlayerCore(
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
         playerId: input.playerId,
-        amount: input.amount,
+        amount: boosted.amount,
         batchId: trimmedBatchId,
         actorId: input.actorId,
-        note: input.note,
+        note: noteWithEvents,
         kind: "player_deposit",
       },
     );
@@ -87,6 +116,8 @@ export class CreditPlayerInCasinoUseCase {
     return {
       batchId: trimmedBatchId,
       amount: input.amount,
+      effectiveAmount: boosted.amount,
+      appliedEvents: boosted.appliedEventNames,
       playerId: input.playerId,
       outcome,
     };

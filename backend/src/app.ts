@@ -76,11 +76,22 @@ import { RaiseAuctionPaddleUseCase } from "./application/use-cases/auction/Raise
 import { ResetAuctionUseCase } from "./application/use-cases/auction/ResetAuction.js";
 import { MarkAuctionSoldUseCase } from "./application/use-cases/auction/MarkAuctionSold.js";
 import { ParseAuctionRepo } from "./infrastructure/parse/repositories/AuctionRepo.js";
+import { ParseCasinoEventRepo } from "./infrastructure/parse/repositories/CasinoEventRepo.js";
 import { AuctionController } from "./interfaces/http/controllers/AuctionController.js";
+import { CasinoEventController } from "./interfaces/http/controllers/CasinoEventController.js";
+import { CreateCasinoEventUseCase } from "./application/use-cases/CreateCasinoEvent.js";
+import { ListCasinoEventsUseCase } from "./application/use-cases/ListCasinoEvents.js";
+import { UpdateCasinoEventUseCase } from "./application/use-cases/UpdateCasinoEvent.js";
+import { SetCasinoEventActiveUseCase } from "./application/use-cases/SetCasinoEventActive.js";
+import { DeleteCasinoEventUseCase } from "./application/use-cases/DeleteCasinoEvent.js";
 import {
   auctionAuthedRoutes,
   auctionPublicRoutes,
 } from "./interfaces/http/routes/auction.routes.js";
+import {
+  casinoEventAdminRoutes,
+  casinoEventPublicRoutes,
+} from "./interfaces/http/routes/casino-events.routes.js";
 import { PlaySlotMachineSpinUseCase } from "./application/use-cases/PlaySlotMachineSpin.js";
 import { ListSlotMachineHistoryUseCase } from "./application/use-cases/ListSlotMachineHistory.js";
 import { GetMyCasinoWalletUseCase } from "./application/use-cases/GetMyCasinoWallet.js";
@@ -142,6 +153,7 @@ export async function createApp(env: Env): Promise<Express> {
   const slotSpinRepo = new ParseSlotMachineSpinRepo(parse);
   const patternRaceBetRepo = new ParsePatternRaceBetRepo(parse);
   const auctionRepo = new ParseAuctionRepo(parse);
+  const casinoEventRepo = new ParseCasinoEventRepo(parse);
   const jwt = new JwtService({
     accessSecret: env.JWT_ACCESS_SECRET,
     refreshSecret: env.JWT_REFRESH_SECRET,
@@ -195,19 +207,30 @@ export async function createApp(env: Env): Promise<Express> {
     walletRepo,
     walletTxRepo,
     listCasinoPlayers,
+    casinoEventRepo,
   );
   const creditPlayerInCasino = new CreditPlayerInCasinoUseCase(
     casinoRepo,
     userRepo,
     walletRepo,
     walletTxRepo,
+    casinoEventRepo,
   );
   const debitPlayerInCasino = new DebitPlayerInCasinoUseCase(
     casinoRepo,
     userRepo,
     walletRepo,
     walletTxRepo,
+    casinoEventRepo,
   );
+  const createCasinoEvent = new CreateCasinoEventUseCase(
+    casinoEventRepo,
+    casinoRepo,
+  );
+  const listCasinoEvents = new ListCasinoEventsUseCase(casinoEventRepo);
+  const updateCasinoEvent = new UpdateCasinoEventUseCase(casinoEventRepo);
+  const setCasinoEventActive = new SetCasinoEventActiveUseCase(casinoEventRepo);
+  const deleteCasinoEvent = new DeleteCasinoEventUseCase(casinoEventRepo);
   const listMyCasinoPlayers = new ListMyCasinoPlayersUseCase(
     casinoRepo,
     userRepo,
@@ -224,6 +247,7 @@ export async function createApp(env: Env): Promise<Express> {
     userRepo,
     walletRepo,
     walletTxRepo,
+    casinoEventRepo,
   );
   const toggleCasinoSubasta = new ToggleCasinoSubastaUseCase(casinoRepo);
   const getCasinoAuction = new GetCasinoAuctionUseCase(casinoRepo, auctionRepo);
@@ -264,6 +288,7 @@ export async function createApp(env: Env): Promise<Express> {
     walletRepo,
     walletTxRepo,
     slotSpinRepo,
+    casinoEventRepo,
   );
   const listSlotMachineHistory = new ListSlotMachineHistoryUseCase(
     casinoRepo,
@@ -274,6 +299,7 @@ export async function createApp(env: Env): Promise<Express> {
     walletRepo,
     walletTxRepo,
     patternRaceBetRepo,
+    casinoEventRepo,
   );
   const getCurrentPatternRace = new GetCurrentPatternRaceUseCase(
     casinoRepo,
@@ -356,6 +382,13 @@ export async function createApp(env: Env): Promise<Express> {
     placePatternRaceBet,
     listMyPatternRaceBets,
   );
+  const casinoEventController = new CasinoEventController(
+    createCasinoEvent,
+    listCasinoEvents,
+    updateCasinoEvent,
+    setCasinoEventActive,
+    deleteCasinoEvent,
+  );
 
   const requireAuthMw = requireAuth(jwt);
   const requireMasterMw = requireRole("master");
@@ -412,6 +445,19 @@ export async function createApp(env: Env): Promise<Express> {
     "/api/v1/me/casinos/:casinoId/auction",
     auctionAuthedRoutes(auctionController, requireAuthMw, requireMasterMw),
   );
+  // Eventos del casino. Admin: CRUD completo bajo /casinos/:casinoId/events
+  // (gated por master). Jugador: sólo eventos activos bajo
+  // /me/casinos/:casinoId/events (solo auth). El banner del jugador hace
+  // polling contra este segundo endpoint para detectar eventos en curso sin
+  // obligar a recargar.
+  app.use(
+    "/api/v1/casinos/:casinoId/events",
+    casinoEventAdminRoutes(casinoEventController, requireAuthMw, requireMasterMw),
+  );
+  app.use(
+    "/api/v1/me/casinos/:casinoId/events",
+    casinoEventPublicRoutes(casinoEventController, requireAuthMw),
+  );
 
   // Unified deployment: serve the built SPA from the same origin as the API.
   // Static assets get direct hits; every other GET falls back to index.html so
@@ -426,12 +472,36 @@ export async function createApp(env: Env): Promise<Express> {
       );
     } else {
       console.log(`[static] Serving SPA from ${frontendDist}`);
+      // Los chunks de Vite llevan hash en el nombre (AdminCasinos-abc123.js)
+      // así que son inmutables: cachearlos 1 año es seguro. `fallthrough:false`
+      // hace que un miss bajo /assets/ devuelva 404 real en lugar de caer al
+      // fallback del SPA y responder index.html con Content-Type: text/html
+      // (eso rompe `import()` dinámico del navegador con "Expected module
+      // script but got text/html" cuando hay un index.html viejo cacheado).
+      app.use(
+        "/assets",
+        express.static(joinPath(frontendDist, "assets"), {
+          maxAge: "1y",
+          immutable: true,
+          fallthrough: false,
+        }),
+      );
+      // Resto de estáticos (favicon, manifest, /audio, /images) sin maxAge
+      // agresivo para no pegarse con imágenes o sonidos que sí rotamos.
       app.use(express.static(frontendDist, { index: false }));
       app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.method !== "GET" && req.method !== "HEAD") return next();
         if (req.path.startsWith("/api/") || req.path.startsWith("/parse")) {
           return next();
         }
+        // Cualquier path con extensión que llegó hasta aquí es un asset que
+        // no existe — devolver 404 en vez de HTML para no confundir al
+        // navegador (y no tapar 404s reales con el shell del SPA).
+        if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
+        // El index.html NUNCA se cachea: cada deploy cambia los chunks
+        // hash-referenced adentro, así que el navegador debe re-pedirlo para
+        // descubrir los nombres nuevos. Los chunks sí son immutable arriba.
+        res.setHeader("Cache-Control", "no-store, must-revalidate");
         res.sendFile(joinPath(frontendDist, "index.html"));
       });
     }

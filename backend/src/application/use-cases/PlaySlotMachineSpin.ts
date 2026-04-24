@@ -1,5 +1,6 @@
 import type { AppUserRepo } from "../../domain/ports/AppUserRepo.js";
 import type { CasinoRepo } from "../../domain/ports/CasinoRepo.js";
+import type { CasinoEventRepo } from "../../domain/ports/CasinoEventRepo.js";
 import type { WalletRepo } from "../../domain/ports/WalletRepo.js";
 import type { WalletTransactionRepo } from "../../domain/ports/WalletTransactionRepo.js";
 import type { SlotMachineSpinRepo } from "../../domain/ports/SlotMachineSpinRepo.js";
@@ -7,6 +8,10 @@ import type { SlotMachineSpin } from "../../domain/entities/SlotMachineSpin.js";
 import type { Role } from "../../domain/entities/Role.js";
 import { AuthError } from "../../domain/errors/AuthError.js";
 import { creditPlayerCore, validateBatchId } from "./helpers/creditPlayerCore.js";
+import {
+  applyCasinoEventMultiplier,
+  annotateNoteWithEvents,
+} from "./helpers/applyCasinoEventMultiplier.js";
 import { evaluateSlotSpin } from "./slots/evaluateSlotSpin.js";
 import { rollSlotReels } from "./slots/rollSlotReels.js";
 import { isBetLevel, type SlotOutcome } from "./slots/slotConfig.js";
@@ -56,6 +61,7 @@ export class PlaySlotMachineSpinUseCase {
     private readonly wallets: WalletRepo,
     private readonly walletTxs: WalletTransactionRepo,
     private readonly spins: SlotMachineSpinRepo,
+    private readonly casinoEvents: CasinoEventRepo,
   ) {}
 
   async execute(input: PlaySlotMachineSpinInput): Promise<PlaySlotMachineSpinResult> {
@@ -144,15 +150,34 @@ export class PlaySlotMachineSpinUseCase {
       throw AuthError.validation(`debit failed: ${debit.reason}`);
     }
 
-    // 5. Rodar y evaluar.
+    // 5. Rodar y evaluar. El `payout` base sale de la tabla de payouts del
+    //    juego (bet × multiplier). Si hay un evento SLOT_DOUBLE activo, el
+    //    monto acreditado al wallet — y lo que verá el jugador en su saldo y
+    //    en la persistencia del spin — se duplica.
     const result = rollSlotReels();
     const { multiplier, outcome } = evaluateSlotSpin(result);
-    const payout = input.bet * multiplier;
+    const basePayout = input.bet * multiplier;
+
+    const activeEvents = await this.casinoEvents.listActiveByCasino(
+      input.casinoId,
+    );
+    const boosted = applyCasinoEventMultiplier(
+      activeEvents,
+      "slot_payout",
+      basePayout,
+    );
+    const payout = boosted.amount;
     const net = payout - input.bet;
 
     // 6. Crédito del payout si aplica.
     let balanceAfter: number;
     if (payout > 0) {
+      const baseNote = `slot payout ${multiplier}x on ${result.join(",")}`;
+      const noteWithEvents = annotateNoteWithEvents(
+        baseNote,
+        boosted.appliedEventNames,
+        boosted.multiplier,
+      );
       const credit = await creditPlayerCore(
         { wallets: this.wallets, walletTxs: this.walletTxs },
         {
@@ -161,7 +186,7 @@ export class PlaySlotMachineSpinUseCase {
           amount: payout,
           batchId,
           actorId: input.actorId,
-          note: `slot payout ${multiplier}x on ${result.join(",")}`,
+          note: noteWithEvents,
           kind: "slot_payout",
           keySuffix: "payout",
         },

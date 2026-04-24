@@ -32,6 +32,13 @@ import {
   apiUpdateMesa,
   type Mesa,
 } from "@/lib/mesaApi";
+import {
+  apiActivateCasinoEvent,
+  apiDeactivateCasinoEvent,
+  apiListCasinoEvents,
+  CASINO_EVENT_META,
+  type CasinoEvent,
+} from "@/lib/casinoEventsApi";
 import { findGame, gameLabel } from "@/domain/games";
 
 function formatDate(iso: string): string {
@@ -54,7 +61,9 @@ type MesaDialog =
   | { kind: "unarchive"; mesa: Mesa }
   | { kind: "delete"; mesa: Mesa }
   | { kind: "assignDepartamentos" }
-  | { kind: "assignDealers" };
+  | { kind: "assignDealers" }
+  | { kind: "eventActivate"; event: CasinoEvent }
+  | { kind: "eventDeactivate"; event: CasinoEvent };
 
 export default function AdminCasinoDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +78,10 @@ export default function AdminCasinoDetail() {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [mesasLoading, setMesasLoading] = useState(true);
   const [mesasError, setMesasError] = useState<string | null>(null);
+
+  const [events, setEvents] = useState<CasinoEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   // Roster de candidatos a tallador (dealers + masters). Los admins también
   // operan mesas, así que aparecen aquí junto con los dealers. Fetched once
@@ -139,6 +152,21 @@ export default function AdminCasinoDetail() {
     }
   }, [id, withAuth]);
 
+  const loadEvents = useCallback(async () => {
+    if (!id) return;
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      const { events } = await withAuth((t) => apiListCasinoEvents(t, id));
+      setEvents(events);
+    } catch (err) {
+      const e = err as ApiError;
+      setEventsError(e.message ?? "No se pudieron cargar los eventos.");
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [id, withAuth]);
+
   const loadDealers = useCallback(async () => {
     try {
       const { users } = await withAuth((t) => apiListDealerCandidates(t));
@@ -177,10 +205,18 @@ export default function AdminCasinoDetail() {
   useEffect(() => {
     loadCasino();
     loadMesas();
+    loadEvents();
     loadDealers();
     loadDepartamentos();
     loadCasinoPlayers();
-  }, [loadCasino, loadMesas, loadDealers, loadDepartamentos, loadCasinoPlayers]);
+  }, [
+    loadCasino,
+    loadMesas,
+    loadEvents,
+    loadDealers,
+    loadDepartamentos,
+    loadCasinoPlayers,
+  ]);
 
   function closeDialog() {
     if (dialogLoading) return;
@@ -321,6 +357,38 @@ export default function AdminCasinoDetail() {
     }
   }
 
+  async function handleActivateEvent(event: CasinoEvent) {
+    if (!id) return;
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiActivateCasinoEvent(t, id, event.id));
+      setDialog({ kind: "none" });
+      await loadEvents();
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo activar el evento");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function handleDeactivateEvent(event: CasinoEvent) {
+    if (!id) return;
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiDeactivateCasinoEvent(t, id, event.id));
+      setDialog({ kind: "none" });
+      await loadEvents();
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo desactivar el evento");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
   const breadcrumbs = [
     { label: "Casinos", to: "/admin/casinos" },
     { label: casino?.name ?? (casinoLoading ? "Cargando…" : "Casino") },
@@ -332,7 +400,9 @@ export default function AdminCasinoDetail() {
     : undefined;
 
   const canAddMesas = Boolean(casino && casino.active);
+  const canToggleEvents = Boolean(casino && casino.active);
   const dialogMesa = "mesa" in dialog ? dialog.mesa : null;
+  const dialogEvent = "event" in dialog ? dialog.event : null;
 
   return (
     <AdminLayout
@@ -668,6 +738,56 @@ export default function AdminCasinoDetail() {
                 </ol>
               )}
             </Card>
+
+            {/* Eventos del casino. Catálogo fijo (Doble ganancia + Cobros
+                dobles) — el admin sólo los activa/desactiva; no se crean ni
+                borran manualmente. Los jugadores los ven aparecer/irse en
+                vivo (polling) sin necesidad de recargar. */}
+            <Card tone="felt" className="flex flex-col gap-4">
+              <div>
+                <h3 className="font-display text-xl text-[--color-ivory]">
+                  Eventos
+                </h3>
+                <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+                  {eventsLoading
+                    ? "Cargando…"
+                    : `${events.filter((e) => e.active).length} en curso de ${events.length}`}
+                </p>
+              </div>
+
+              {eventsError && (
+                <p
+                  className="font-label text-xs tracking-wider text-[--color-carmine-400]"
+                  role="alert"
+                >
+                  {eventsError}
+                </p>
+              )}
+
+              {eventsLoading ? (
+                <p className="font-label text-sm text-[--color-cream]/60">
+                  Cargando eventos…
+                </p>
+              ) : (
+                <ol className="flex flex-col gap-2">
+                  {events.map((ev) => (
+                    <EventRow
+                      key={ev.id}
+                      event={ev}
+                      canToggle={canToggleEvents}
+                      onActivate={() => {
+                        setDialogError(null);
+                        setDialog({ kind: "eventActivate", event: ev });
+                      }}
+                      onDeactivate={() => {
+                        setDialogError(null);
+                        setDialog({ kind: "eventDeactivate", event: ev });
+                      }}
+                    />
+                  ))}
+                </ol>
+              )}
+            </Card>
           </>
         )}
       </div>
@@ -831,6 +951,51 @@ export default function AdminCasinoDetail() {
         onConfirm={() => dialogMesa && handleDeleteMesa(dialogMesa)}
         onCancel={closeDialog}
       />
+
+      <ConfirmDialog
+        open={dialog.kind === "eventActivate"}
+        title="Activar evento"
+        description={
+          dialogEvent && (
+            <p>
+              Se activará{" "}
+              <span className="font-display text-[--color-ivory]">
+                {dialogEvent.name}
+              </span>
+              . {CASINO_EVENT_META[dialogEvent.type].description} Los jugadores
+              lo verán en vivo.
+            </p>
+          )
+        }
+        tone="primary"
+        confirmLabel="Activar"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogEvent && handleActivateEvent(dialogEvent)}
+        onCancel={closeDialog}
+      />
+
+      <ConfirmDialog
+        open={dialog.kind === "eventDeactivate"}
+        title="Desactivar evento"
+        description={
+          dialogEvent && (
+            <p>
+              <span className="font-display text-[--color-ivory]">
+                {dialogEvent.name}
+              </span>{" "}
+              dejará de afectar las transacciones y desaparecerá del banner de
+              los jugadores.
+            </p>
+          )
+        }
+        tone="purple"
+        confirmLabel="Desactivar"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogEvent && handleDeactivateEvent(dialogEvent)}
+        onCancel={closeDialog}
+      />
     </AdminLayout>
   );
 }
@@ -937,6 +1102,68 @@ function MesaRow({
         <Button variant="danger" size="sm" onClick={onDelete}>
           Eliminar
         </Button>
+      </div>
+    </li>
+  );
+}
+
+type EventRowProps = {
+  event: CasinoEvent;
+  canToggle: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
+};
+
+function EventRow({
+  event,
+  canToggle,
+  onActivate,
+  onDeactivate,
+}: EventRowProps) {
+  const meta = CASINO_EVENT_META[event.type];
+
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
+      <span aria-hidden className="text-2xl leading-none shrink-0">
+        {meta.emoji}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-display text-lg text-[--color-ivory] truncate">
+            {event.name}
+          </span>
+          {event.active ? (
+            <Badge tone={meta.tone}>en curso</Badge>
+          ) : (
+            <Badge tone="neutral">desactivado</Badge>
+          )}
+        </div>
+        <div className="font-label text-xs text-[--color-cream]/70 mt-0.5">
+          {meta.description}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {event.active ? (
+          <Button
+            variant="purple"
+            size="sm"
+            onClick={onDeactivate}
+            disabled={!canToggle}
+            title={canToggle ? undefined : "Reactiva el casino para modificar eventos"}
+          >
+            Desactivar
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onActivate}
+            disabled={!canToggle}
+            title={canToggle ? undefined : "Reactiva el casino para modificar eventos"}
+          >
+            Activar
+          </Button>
+        )}
       </div>
     </li>
   );

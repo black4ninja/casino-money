@@ -1,4 +1,5 @@
 import type { CasinoRepo } from "../../domain/ports/CasinoRepo.js";
+import type { CasinoEventRepo } from "../../domain/ports/CasinoEventRepo.js";
 import type { WalletRepo } from "../../domain/ports/WalletRepo.js";
 import type { WalletTransactionRepo } from "../../domain/ports/WalletTransactionRepo.js";
 import { AuthError } from "../../domain/errors/AuthError.js";
@@ -8,6 +9,10 @@ import {
   validateAmount,
   validateBatchId,
 } from "./helpers/creditPlayerCore.js";
+import {
+  applyCasinoEventMultiplier,
+  annotateNoteWithEvents,
+} from "./helpers/applyCasinoEventMultiplier.js";
 
 export type BulkCreditCasinoPlayersInput = {
   casinoId: string;
@@ -24,10 +29,16 @@ export type BulkCreditFailure = {
 
 export type BulkCreditResult = {
   batchId: string;
+  /** Monto ingresado por el admin (antes de multiplicadores). */
   amount: number;
+  /** Monto efectivo acreditado por jugador (post-multiplicador). */
+  effectiveAmount: number;
+  /** Nombres de eventos que duplicaron el reparto, si hubo. */
+  appliedEvents: string[];
   creditedCount: number;
   skippedCount: number;
   failedCount: number;
+  /** `effectiveAmount * creditedCount`. */
   totalIssued: number;
   playersCredited: string[];
   playersSkipped: string[];
@@ -46,6 +57,7 @@ export class BulkCreditCasinoPlayersUseCase {
     private readonly wallets: WalletRepo,
     private readonly walletTxs: WalletTransactionRepo,
     private readonly listCasinoPlayers: ListCasinoPlayersUseCase,
+    private readonly casinoEvents: CasinoEventRepo,
   ) {}
 
   async execute(input: BulkCreditCasinoPlayersInput): Promise<BulkCreditResult> {
@@ -65,6 +77,24 @@ export class BulkCreditCasinoPlayersUseCase {
     const trimmedBatchId = input.batchId.trim();
     const roster = await this.listCasinoPlayers.execute(input.casinoId);
 
+    // Se resuelve el multiplicador UNA vez con el monto ingresado — cada
+    // jugador recibe exactamente el mismo amount efectivo. Evita race donde
+    // el admin archive el evento a mitad del reparto y algunos jugadores
+    // cobren el doble y otros no.
+    const activeEvents = await this.casinoEvents.listActiveByCasino(
+      input.casinoId,
+    );
+    const boosted = applyCasinoEventMultiplier(
+      activeEvents,
+      "global_credit",
+      input.amount,
+    );
+    const noteWithEvents = annotateNoteWithEvents(
+      input.note,
+      boosted.appliedEventNames,
+      boosted.multiplier,
+    );
+
     const playersCredited: string[] = [];
     const playersSkipped: string[] = [];
     const playersFailed: BulkCreditFailure[] = [];
@@ -76,10 +106,10 @@ export class BulkCreditCasinoPlayersUseCase {
           {
             casinoId: input.casinoId,
             playerId: player.id,
-            amount: input.amount,
+            amount: boosted.amount,
             batchId: trimmedBatchId,
             actorId: input.actorId,
-            note: input.note,
+            note: noteWithEvents,
             kind: "global_credit",
           },
         );
@@ -99,10 +129,12 @@ export class BulkCreditCasinoPlayersUseCase {
     return {
       batchId: trimmedBatchId,
       amount: input.amount,
+      effectiveAmount: boosted.amount,
+      appliedEvents: boosted.appliedEventNames,
       creditedCount: playersCredited.length,
       skippedCount: playersSkipped.length,
       failedCount: playersFailed.length,
-      totalIssued: playersCredited.length * input.amount,
+      totalIssued: playersCredited.length * boosted.amount,
       playersCredited,
       playersSkipped,
       playersFailed,

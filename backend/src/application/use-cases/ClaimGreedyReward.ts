@@ -1,5 +1,6 @@
 import type { AppUserRepo } from "../../domain/ports/AppUserRepo.js";
 import type { CasinoRepo } from "../../domain/ports/CasinoRepo.js";
+import type { CasinoEventRepo } from "../../domain/ports/CasinoEventRepo.js";
 import type { WalletRepo } from "../../domain/ports/WalletRepo.js";
 import type { WalletTransactionRepo } from "../../domain/ports/WalletTransactionRepo.js";
 import { AuthError } from "../../domain/errors/AuthError.js";
@@ -8,6 +9,7 @@ import {
   validateBatchId,
   type CreditPlayerOutcome,
 } from "./helpers/creditPlayerCore.js";
+import { annotateNoteWithEvents } from "./helpers/applyCasinoEventMultiplier.js";
 
 export type ClaimGreedyRewardInput = {
   casinoId: string;
@@ -41,6 +43,7 @@ export class ClaimGreedyRewardUseCase {
     private readonly users: AppUserRepo,
     private readonly wallets: WalletRepo,
     private readonly walletTxs: WalletTransactionRepo,
+    private readonly casinoEvents: CasinoEventRepo,
   ) {}
 
   async execute(input: ClaimGreedyRewardInput): Promise<ClaimGreedyRewardResult> {
@@ -70,15 +73,31 @@ export class ClaimGreedyRewardUseCase {
       throw AuthError.validation("player is not part of this casino's roster");
     }
 
+    // Evento GREEDY_DOUBLE: si está activo, duplicamos el reward (2 fichas
+    // por cada 100 clicks en vez de 1). No pasa por el helper genérico
+    // porque el reward es un literal, no un amount variable.
+    const activeEvents = await this.casinoEvents.listActiveByCasino(
+      input.casinoId,
+    );
+    const boost = activeEvents.find(
+      (e) => e.active && e.type === "GREEDY_DOUBLE",
+    );
+    const amount = boost ? GREEDY_REWARD_AMOUNT * 2 : GREEDY_REWARD_AMOUNT;
+    const note = annotateNoteWithEvents(
+      "greedy clicker reward",
+      boost ? [boost.name] : [],
+      boost ? 2 : 1,
+    );
+
     const outcome = await creditPlayerCore(
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
         playerId: input.actorId,
-        amount: GREEDY_REWARD_AMOUNT,
+        amount,
         batchId,
         actorId: input.actorId,
-        note: "greedy clicker reward",
+        note,
         kind: "greedy_reward",
       },
     );

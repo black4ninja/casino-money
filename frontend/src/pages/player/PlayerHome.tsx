@@ -15,6 +15,11 @@ import {
 } from "@/lib/casinoApi";
 import { apiListMyCasinoMesas, type Mesa } from "@/lib/mesaApi";
 import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
+import {
+  apiListActiveCasinoEvents,
+  CASINO_EVENT_META,
+  type CasinoEvent,
+} from "@/lib/casinoEventsApi";
 import { findGame, gameLabel } from "@/domain/games";
 import { TransferToPlayerModal } from "@/components/organisms/TransferToPlayerModal";
 
@@ -46,6 +51,11 @@ export default function PlayerHome() {
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
+  // Eventos activos del casino (banner "Evento en curso"). Se actualizan en
+  // vivo vía polling junto al saldo — el jugador no necesita recargar para
+  // enterarse de que el maestro activó/desactivó un evento.
+  const [activeEvents, setActiveEvents] = useState<CasinoEvent[]>([]);
+
   const [transferOpen, setTransferOpen] = useState(false);
   const [greedySpinKey, setGreedySpinKey] = useState(0);
   const [greedySpinning, setGreedySpinning] = useState(false);
@@ -54,6 +64,29 @@ export default function PlayerHome() {
   // Evita disparar el crédito dos veces si el usuario clickea rápido mientras
   // la petición del décimo toque sigue en vuelo.
   const greedyClaimingRef = useRef(false);
+  // Risa malvada al tocar el banner. El mini-juego premia clicks muy rápidos,
+  // así que bloqueamos re-disparos mientras el audio está en curso para que
+  // las reproducciones no se traslapen independientemente de la cadencia.
+  const laughAudioRef = useRef<HTMLAudioElement | null>(null);
+  const laughPlayingRef = useRef(false);
+
+  useEffect(() => {
+    const laugh = new Audio("/audio/greedy-laugh.mp3");
+    laugh.preload = "auto";
+    const clearFlag = () => {
+      laughPlayingRef.current = false;
+    };
+    laugh.addEventListener("ended", clearFlag);
+    laugh.addEventListener("error", clearFlag);
+    laughAudioRef.current = laugh;
+    return () => {
+      laugh.removeEventListener("ended", clearFlag);
+      laugh.removeEventListener("error", clearFlag);
+      laugh.pause();
+      laughAudioRef.current = null;
+      laughPlayingRef.current = false;
+    };
+  }, []);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -154,12 +187,32 @@ export default function PlayerHome() {
     loadBalance();
   }, [casino, loadBalance]);
 
+  const loadActiveEvents = useCallback(async () => {
+    if (!casinoId) return;
+    try {
+      const { events } = await withAuth((t) =>
+        apiListActiveCasinoEvents(t, casinoId),
+      );
+      setActiveEvents(events);
+    } catch {
+      setActiveEvents([]);
+    }
+  }, [casinoId, withAuth]);
+
+  useEffect(() => {
+    if (!casino) return;
+    loadActiveEvents();
+  }, [casino, loadActiveEvents]);
+
   // Auto-refresh ligero: mantiene el saldo en sync con lo que ocurra al
   // jugador fuera de esta vista (transferencias recibidas, venta de
   // subasta, depósitos del staff). 4s es suficientemente rápido para que
   // el jugador no perciba desfase y barato porque el endpoint del wallet
   // devuelve un solo documento.
   usePolling(loadBalance, { intervalMs: 4000, paused: !casino });
+  // Mismo intervalo para los eventos — el maestro activa/desactiva y los
+  // jugadores lo ven reflejado en el banner sin recargar.
+  usePolling(loadActiveEvents, { intervalMs: 4000, paused: !casino });
 
   function handleEnterMesa(m: Mesa) {
     if (!casino) return;
@@ -168,9 +221,21 @@ export default function PlayerHome() {
     navigate(`/player/casino/${casino.id}/mesa/${m.id}`);
   }
 
+  function playLaughIfIdle() {
+    const audio = laughAudioRef.current;
+    if (!audio) return;
+    if (laughPlayingRef.current) return;
+    laughPlayingRef.current = true;
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      laughPlayingRef.current = false;
+    });
+  }
+
   function handleGreedyClick() {
     if (!casinoId) return;
     if (casino?.subastaActive) return;
+    playLaughIfIdle();
     setGreedySpinKey((k) => k + 1);
     setGreedySpinning(true);
     setGreedyError(null);
@@ -257,6 +322,8 @@ export default function PlayerHome() {
               </Button>
             </Card>
           )}
+
+          {activeEvents.length > 0 && <EventsBanner events={activeEvents} />}
 
           <div className="flex flex-col gap-2">
             <button
@@ -489,5 +556,57 @@ export default function PlayerHome() {
         />
       )}
     </AppLayout>
+  );
+}
+
+/**
+ * Banner de eventos en curso — arriba de la imagen de Greedy. Lista uno o más
+ * eventos activos con el nombre definido por el maestro y una línea corta
+ * que explica el efecto. Aparece/desaparece en vivo por polling: el jugador
+ * no necesita recargar cuando el maestro activa/desactiva un evento.
+ */
+function EventsBanner({ events }: { events: CasinoEvent[] }) {
+  return (
+    <Card tone="gold" className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Badge tone="gold">evento en curso</Badge>
+        <span
+          className="font-label text-xs tracking-widest text-[--color-cream]/80"
+          aria-live="polite"
+        >
+          {events.length === 1
+            ? "Un evento activo afecta tus transacciones"
+            : `${events.length} eventos activos afectan tus transacciones`}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {events.map((ev) => {
+          const meta = CASINO_EVENT_META[ev.type];
+          return (
+            <li
+              key={ev.id}
+              className="flex items-start gap-3 rounded-xl bg-[--color-smoke]/60 px-3 py-2 ring-1 ring-inset ring-[--color-gold-500]/30"
+            >
+              <span aria-hidden className="text-2xl leading-none shrink-0">
+                {meta.emoji}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="font-display text-lg text-[--color-ivory] truncate">
+                    {ev.name}
+                  </span>
+                  <Badge tone={meta.tone} size="sm">
+                    {meta.shortLabel}
+                  </Badge>
+                </div>
+                <p className="font-label text-xs text-[--color-cream]/75 mt-0.5">
+                  {meta.description}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }
