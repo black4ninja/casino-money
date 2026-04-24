@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { usePolling } from "@/hooks/usePolling";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { Card } from "@/components/atoms/Card";
@@ -35,6 +36,8 @@ export default function PlayerHome() {
   const [balanceLoading, setBalanceLoading] = useState(false);
 
   const [transferOpen, setTransferOpen] = useState(false);
+  const [greedySpinKey, setGreedySpinKey] = useState(0);
+  const [greedySpinning, setGreedySpinning] = useState(false);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -115,26 +118,32 @@ export default function PlayerHome() {
   // Load wallet balance for this casino. Reusa el endpoint /me/.../slots/wallet
   // que devuelve el saldo del jugador en este casino (fuente única para
   // cualquier juego que consuma/acredite fichas vía wallet).
+  const loadBalance = useCallback(async () => {
+    if (!casinoId) return;
+    setBalanceLoading(true);
+    try {
+      const wallet = await withAuth((t) =>
+        apiGetMyCasinoSlotWallet(t, casinoId),
+      );
+      setBalance(wallet.balance);
+    } catch {
+      setBalance(0);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [casinoId, withAuth]);
+
   useEffect(() => {
-    if (!casinoId || !casino) return;
-    let cancelled = false;
-    (async () => {
-      setBalanceLoading(true);
-      try {
-        const wallet = await withAuth((t) =>
-          apiGetMyCasinoSlotWallet(t, casinoId),
-        );
-        if (!cancelled) setBalance(wallet.balance);
-      } catch {
-        if (!cancelled) setBalance(0);
-      } finally {
-        if (!cancelled) setBalanceLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [casinoId, casino, withAuth]);
+    if (!casino) return;
+    loadBalance();
+  }, [casino, loadBalance]);
+
+  // Auto-refresh ligero: mantiene el saldo en sync con lo que ocurra al
+  // jugador fuera de esta vista (transferencias recibidas, venta de
+  // subasta, depósitos del staff). 4s es suficientemente rápido para que
+  // el jugador no perciba desfase y barato porque el endpoint del wallet
+  // devuelve un solo documento.
+  usePolling(loadBalance, { intervalMs: 4000, paused: !casino });
 
   function handleEnterMesa(m: Mesa) {
     if (!casino) return;
@@ -173,12 +182,56 @@ export default function PlayerHome() {
 
       {casino && (
         <>
-          <Card tone="felt" className="flex flex-col gap-2">
-            <Badge tone="gold">AQUÍ JUEGAS</Badge>
-            <h2 className="font-display text-2xl text-[--color-ivory]">
-              {casino.name}
-            </h2>
-          </Card>
+          {casino.subastaActive && (
+            <Card tone="night" className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Badge tone="gold">subasta en curso</Badge>
+                <p className="font-label text-xs tracking-widest text-[--color-cream]/70">
+                  Las operaciones de dinero están suspendidas mientras dura la
+                  puja.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() =>
+                  navigate(`/player/casino/${casino.id}/subasta`)
+                }
+              >
+                Entrar a la puja
+              </Button>
+            </Card>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setGreedySpinKey((k) => k + 1);
+              setGreedySpinning(true);
+            }}
+            aria-label="Greedy: la casa siempre gana"
+            className="block w-full overflow-hidden rounded-2xl ring-2 ring-inset ring-[--color-gold-500]/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)] transition hover:ring-[--color-gold-400] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[--color-gold-400]/70"
+            style={{ perspective: "1200px" }}
+          >
+            <picture className="block">
+              <source srcSet="/images/banners/greedy.avif" type="image/avif" />
+              <source srcSet="/images/banners/greedy.webp" type="image/webp" />
+              <img
+                key={`greedy-${greedySpinKey}`}
+                src="/images/banners/greedy.webp"
+                alt="Greedy — la casa siempre gana"
+                draggable={false}
+                loading="eager"
+                decoding="async"
+                onAnimationEnd={() => setGreedySpinning(false)}
+                className={[
+                  "block h-auto w-full select-none",
+                  greedySpinning ? "animate-card-twirl" : "",
+                ].join(" ")}
+                style={{ backfaceVisibility: "visible" }}
+              />
+            </picture>
+          </button>
 
           <Card tone="night" className="flex flex-col items-center gap-3 py-6">
             <p className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/60">
@@ -191,14 +244,26 @@ export default function PlayerHome() {
             ) : (
               <Balance amount={balance ?? 0} size="lg" />
             )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setTransferOpen(true)}
-              disabled={!balance || balance <= 0}
-            >
-              Transferir a otro jugador →
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setTransferOpen(true)}
+                disabled={!balance || balance <= 0}
+              >
+                Transferir a otro jugador
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadBalance}
+                disabled={balanceLoading}
+                aria-label="Actualizar saldo"
+                title="Refrescar saldo"
+              >
+                {balanceLoading ? "Actualizando…" : "↻ Actualizar"}
+              </Button>
+            </div>
           </Card>
 
           <Card tone="night" className="flex flex-col gap-3">
@@ -223,8 +288,14 @@ export default function PlayerHome() {
                   navigate(`/player/casino/${casino.id}/slots`)
                 }
                 className="w-full sm:w-auto"
+                disabled={casino.subastaActive}
+                title={
+                  casino.subastaActive
+                    ? "Pausado durante la subasta"
+                    : undefined
+                }
               >
-                Jugar →
+                {casino.subastaActive ? "Pausado" : "Jugar"}
               </Button>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
@@ -244,12 +315,18 @@ export default function PlayerHome() {
               <Button
                 variant="info"
                 size="sm"
+                disabled={casino.subastaActive}
+                title={
+                  casino.subastaActive
+                    ? "Pausado durante la subasta"
+                    : undefined
+                }
                 onClick={() =>
                   navigate(`/player/casino/${casino.id}/carrera`)
                 }
                 className="w-full sm:w-auto"
               >
-                Apostar →
+                Apostar
               </Button>
             </div>
           </Card>
@@ -306,7 +383,7 @@ export default function PlayerHome() {
                         onClick={() => handleEnterMesa(m)}
                         className="w-full sm:w-auto"
                       >
-                        ¡A la mesa! →
+                        ¡A la mesa!
                       </Button>
                     </li>
                   );

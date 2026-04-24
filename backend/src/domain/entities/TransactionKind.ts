@@ -9,11 +9,13 @@
  *   slot_payout          → crédito del premio al ganar en la tragamonedas.
  *   carrera_bet          → débito al apostar en la Carrera de Patrones.
  *   carrera_payout       → crédito del premio cuando la apuesta de la carrera gana.
+ *   auction_purchase     → débito al ganador cuando el anunciador cierra con "Vendido".
  *
  * Reglas de signo:
  *   global_credit, player_deposit, player_transfer_in, slot_payout,
- *     carrera_payout                                             → delta > 0.
- *   player_debit, player_transfer_out, slot_bet, carrera_bet     → delta < 0.
+ *     carrera_payout                                                 → delta > 0.
+ *   player_debit, player_transfer_out, slot_bet, carrera_bet,
+ *     auction_purchase                                                → delta < 0.
  */
 export type TransactionKind =
   | "global_credit"
@@ -24,7 +26,8 @@ export type TransactionKind =
   | "slot_bet"
   | "slot_payout"
   | "carrera_bet"
-  | "carrera_payout";
+  | "carrera_payout"
+  | "auction_purchase";
 
 export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "global_credit",
@@ -36,6 +39,7 @@ export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "slot_payout",
   "carrera_bet",
   "carrera_payout",
+  "auction_purchase",
 ] as const;
 
 export function isTransactionKind(value: unknown): value is TransactionKind {
@@ -51,6 +55,7 @@ export const DEBIT_KINDS: readonly TransactionKind[] = [
   "carrera_bet",
   "player_debit",
   "player_transfer_out",
+  "auction_purchase",
 ];
 
 export function isDebitKind(kind: TransactionKind): boolean {

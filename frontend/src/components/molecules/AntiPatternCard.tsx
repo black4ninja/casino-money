@@ -3,6 +3,8 @@ import {
   antiPatternImagePath,
   type AntiPattern,
 } from "@/domain/antiPatterns";
+import { ImageLightboxModal } from "./ImageLightbox";
+import { Button } from "@/components/atoms/Button";
 
 type Props = {
   antiPattern: AntiPattern;
@@ -17,6 +19,7 @@ type Props = {
  */
 export function AntiPatternCard({ antiPattern }: Props) {
   const [flipped, setFlipped] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const sources = antiPatternImagePath(antiPattern);
 
   return (
@@ -103,10 +106,36 @@ export function AntiPatternCard({ antiPattern }: Props) {
                   </ul>
                 </section>
               </div>
+
+              <footer
+                className="border-t border-[--color-gold-500]/20 bg-[--color-smoke]/60 px-4 py-3"
+                onClick={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant="info"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZoomOpen(true);
+                  }}
+                >
+                  Ver imagen
+                </Button>
+              </footer>
             </div>
           </div>
         </div>
       </button>
+
+      <ImageLightboxModal
+        sources={sources}
+        alt={`Carta del anti-patrón ${antiPattern.name}`}
+        open={zoomOpen}
+        onClose={() => setZoomOpen(false)}
+      />
     </div>
   );
 }

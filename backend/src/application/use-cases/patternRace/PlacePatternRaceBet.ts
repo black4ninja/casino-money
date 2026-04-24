@@ -77,6 +77,7 @@ export class PlacePatternRaceBetUseCase {
     const casino = await this.casinos.findById(input.casinoId);
     if (!casino) throw AuthError.validation("casino not found");
     if (!casino.active) throw AuthError.casinoArchived();
+    if (casino.subastaActive) throw AuthError.casinoInSubasta();
 
     if (!isPatternId(input.patternId)) {
       throw AuthError.validation("patternId invalido");

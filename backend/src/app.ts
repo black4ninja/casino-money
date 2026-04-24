@@ -67,6 +67,19 @@ import { ListCasinoEconomyWalletsUseCase } from "./application/use-cases/ListCas
 import { ListPlayerCasinoTransactionsUseCase } from "./application/use-cases/ListPlayerCasinoTransactions.js";
 import { ListMyCasinoPlayersUseCase } from "./application/use-cases/ListMyCasinoPlayers.js";
 import { TransferBetweenPlayersUseCase } from "./application/use-cases/TransferBetweenPlayers.js";
+import { ToggleCasinoSubastaUseCase } from "./application/use-cases/ToggleCasinoSubasta.js";
+import { GetCasinoAuctionUseCase } from "./application/use-cases/auction/GetCasinoAuction.js";
+import { SetAuctionInitialValueUseCase } from "./application/use-cases/auction/SetAuctionInitialValue.js";
+import { AdjustAuctionValueUseCase } from "./application/use-cases/auction/AdjustAuctionValue.js";
+import { RaiseAuctionPaddleUseCase } from "./application/use-cases/auction/RaiseAuctionPaddle.js";
+import { ResetAuctionUseCase } from "./application/use-cases/auction/ResetAuction.js";
+import { MarkAuctionSoldUseCase } from "./application/use-cases/auction/MarkAuctionSold.js";
+import { ParseAuctionRepo } from "./infrastructure/parse/repositories/AuctionRepo.js";
+import { AuctionController } from "./interfaces/http/controllers/AuctionController.js";
+import {
+  auctionAuthedRoutes,
+  auctionPublicRoutes,
+} from "./interfaces/http/routes/auction.routes.js";
 import { PlaySlotMachineSpinUseCase } from "./application/use-cases/PlaySlotMachineSpin.js";
 import { ListSlotMachineHistoryUseCase } from "./application/use-cases/ListSlotMachineHistory.js";
 import { GetMyCasinoWalletUseCase } from "./application/use-cases/GetMyCasinoWallet.js";
@@ -127,6 +140,7 @@ export async function createApp(env: Env): Promise<Express> {
   const walletTxRepo = new ParseWalletTransactionRepo(parse);
   const slotSpinRepo = new ParseSlotMachineSpinRepo(parse);
   const patternRaceBetRepo = new ParsePatternRaceBetRepo(parse);
+  const auctionRepo = new ParseAuctionRepo(parse);
   const jwt = new JwtService({
     accessSecret: env.JWT_ACCESS_SECRET,
     refreshSecret: env.JWT_REFRESH_SECRET,
@@ -204,6 +218,29 @@ export async function createApp(env: Env): Promise<Express> {
     walletRepo,
     walletTxRepo,
   );
+  const toggleCasinoSubasta = new ToggleCasinoSubastaUseCase(casinoRepo);
+  const getCasinoAuction = new GetCasinoAuctionUseCase(casinoRepo, auctionRepo);
+  const setAuctionInitial = new SetAuctionInitialValueUseCase(
+    casinoRepo,
+    auctionRepo,
+  );
+  const adjustAuctionValue = new AdjustAuctionValueUseCase(
+    casinoRepo,
+    auctionRepo,
+  );
+  const raiseAuctionPaddle = new RaiseAuctionPaddleUseCase(
+    casinoRepo,
+    userRepo,
+    auctionRepo,
+    walletRepo,
+  );
+  const resetAuction = new ResetAuctionUseCase(casinoRepo, auctionRepo);
+  const markAuctionSold = new MarkAuctionSoldUseCase(
+    casinoRepo,
+    auctionRepo,
+    walletRepo,
+    walletTxRepo,
+  );
   const listCasinoEconomyWallets = new ListCasinoEconomyWalletsUseCase(
     casinoRepo,
     walletRepo,
@@ -266,7 +303,16 @@ export async function createApp(env: Env): Promise<Express> {
     setCasinoActive,
     deleteCasino,
     listCasinoPlayers,
+    toggleCasinoSubasta,
     casinoRepo,
+  );
+  const auctionController = new AuctionController(
+    getCasinoAuction,
+    setAuctionInitial,
+    adjustAuctionValue,
+    raiseAuctionPaddle,
+    resetAuction,
+    markAuctionSold,
   );
   const mesaController = new MesaController(
     createMesa,
@@ -347,6 +393,16 @@ export async function createApp(env: Env): Promise<Express> {
   app.use(
     "/api/v1/me/casinos/:casinoId/carrera",
     carreraMeRoutes(patternRaceController, requireAuthMw),
+  );
+  // Subasta. Display público para proyector (sin auth) + endpoints
+  // autenticados para paleta del jugador y controles del anunciador.
+  app.use(
+    "/api/v1/public/casinos/:casinoId/auction",
+    auctionPublicRoutes(auctionController),
+  );
+  app.use(
+    "/api/v1/me/casinos/:casinoId/auction",
+    auctionAuthedRoutes(auctionController, requireAuthMw, requireMasterMw),
   );
 
   // Unified deployment: serve the built SPA from the same origin as the API.

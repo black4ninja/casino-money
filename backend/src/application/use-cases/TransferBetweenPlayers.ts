@@ -72,6 +72,11 @@ export class TransferBetweenPlayersUseCase {
     const casino = await this.casinos.findById(input.casinoId);
     if (!casino) throw AuthError.tokenInvalid();
     if (!casino.active) throw AuthError.casinoArchived();
+    // NOTE: las transferencias jugador→jugador SIGUEN permitidas durante
+    // subasta. Son el mecanismo para que un jugador que no puede pujar
+    // aporte sus fondos a otro y lo "financie" antes de su siguiente oferta.
+    // Los cobros/depósitos del staff sí siguen bloqueados — esos los detiene
+    // el anunciador para que la economía no se mueva fuera de la subasta.
 
     const amountErr = validateAmount(input.amount);
     if (amountErr) throw AuthError.validation(amountErr);

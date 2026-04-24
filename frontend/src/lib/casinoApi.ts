@@ -26,6 +26,11 @@ export type Casino = {
    */
   dealerIds: string[];
   active: boolean;
+  /**
+   * Modo subasta. Cuando es true, todas las operaciones monetarias están
+   * suspendidas y se habilita el flujo de puja (paletas, no dinero).
+   */
+  subastaActive: boolean;
   exists: boolean;
   createdAt: string;
 };
@@ -153,6 +158,25 @@ export async function apiUnarchiveCasino(
   const res = await fetch(`${BASE}/casinos/${id}/unarchive`, {
     method: "POST",
     headers: authedHeaders(accessToken),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
+ * Enciende o apaga el modo subasta del casino. Mientras está encendido,
+ * el backend bloquea toda operación de dinero (crédito, cobro, transferencia,
+ * tragamonedas, carrera) y habilita el flujo de paletas.
+ */
+export async function apiSetCasinoSubasta(
+  accessToken: string,
+  id: string,
+  subastaActive: boolean,
+): Promise<{ casino: Casino }> {
+  const res = await fetch(`${BASE}/casinos/${id}/subasta`, {
+    method: "POST",
+    headers: authedHeaders(accessToken, true),
+    body: JSON.stringify({ subastaActive }),
   });
   if (!res.ok) throw await parseError(res);
   return res.json();

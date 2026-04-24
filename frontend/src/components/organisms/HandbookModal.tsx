@@ -15,7 +15,8 @@ type View =
   | { kind: "picker" }
   | { kind: "categories" }
   | { kind: "patterns-deck"; category: Category }
-  | { kind: "antipatterns-deck" };
+  | { kind: "antipatterns-deck" }
+  | { kind: "rules" };
 
 type Props = {
   open: boolean;
@@ -29,6 +30,14 @@ const BANNER_PATTERNS = {
 const BANNER_ANTIPATTERNS = {
   avif: "/images/banners/antipatterns.avif",
   webp: "/images/banners/antipatterns.webp",
+};
+const BANNER_INSTRUCCIONES = {
+  avif: "/images/banners/instrucciones.avif",
+  webp: "/images/banners/instrucciones.webp",
+};
+const RULES_SHEET = {
+  avif: "/images/banners/reglas-casino.avif",
+  webp: "/images/banners/reglas-casino.webp",
 };
 
 const CATEGORY_BANNERS: Record<
@@ -108,6 +117,7 @@ export function HandbookModal({ open, onClose }: Props) {
     if (view.kind === "patterns-deck") setView({ kind: "categories" });
     else if (view.kind === "antipatterns-deck") setView({ kind: "picker" });
     else if (view.kind === "categories") setView({ kind: "picker" });
+    else if (view.kind === "rules") setView({ kind: "picker" });
     else onClose();
   }
 
@@ -120,7 +130,7 @@ export function HandbookModal({ open, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-start justify-center px-3 py-4 sm:px-6 sm:py-8 overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-label="Manual de patrones"
+      aria-label="Manual"
     >
       <button
         type="button"
@@ -152,11 +162,12 @@ export function HandbookModal({ open, onClose }: Props) {
               </button>
             )}
             <h2 className="gold-shine font-display text-xl leading-tight sm:text-2xl">
-              {view.kind === "picker" && "Manual de patrones"}
+              {view.kind === "picker" && "Manual"}
               {view.kind === "categories" && "Patrones de diseño"}
               {view.kind === "patterns-deck" &&
                 `Patrones · ${CATEGORY_BANNERS[view.category].label}`}
               {view.kind === "antipatterns-deck" && "Anti-patrones"}
+              {view.kind === "rules" && "Instrucciones"}
             </h2>
             <p className="font-label text-[0.6rem] uppercase tracking-[0.28em] text-[--color-cream]/65">
               {view.kind === "picker" && "Elegí una sección"}
@@ -166,6 +177,7 @@ export function HandbookModal({ open, onClose }: Props) {
                 `${patternsByCategory[view.category].length} cartas`}
               {view.kind === "antipatterns-deck" &&
                 `${ANTI_PATTERNS.length} cartas`}
+              {view.kind === "rules" && "Reglas de la actividad"}
             </p>
           </div>
           <button
@@ -178,21 +190,31 @@ export function HandbookModal({ open, onClose }: Props) {
           </button>
         </header>
 
-        <div className="flex-1 overflow-hidden p-4 sm:p-6">
+        <div
+          className={`flex-1 ${view.kind === "rules" ? "overflow-y-auto" : "overflow-hidden"} p-4 sm:p-6`}
+        >
           {view.kind === "picker" && (
-            <div className="grid h-full content-center gap-4 sm:grid-cols-2">
+            <div className="grid h-full content-center gap-4">
               <PickerCard
-                banner={BANNER_PATTERNS}
-                alt="Patrones de diseño"
-                caption="23 patrones con UML, casos y código"
-                onClick={() => setView({ kind: "categories" })}
+                banner={BANNER_INSTRUCCIONES}
+                alt="Instrucciones"
+                caption="Cómo se juega la actividad, paso a paso"
+                onClick={() => setView({ kind: "rules" })}
               />
-              <PickerCard
-                banner={BANNER_ANTIPATTERNS}
-                alt="Anti-patrones"
-                caption="Errores comunes y cómo evitarlos"
-                onClick={() => setView({ kind: "antipatterns-deck" })}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <PickerCard
+                  banner={BANNER_PATTERNS}
+                  alt="Patrones de diseño"
+                  caption="23 patrones con UML, casos y código"
+                  onClick={() => setView({ kind: "categories" })}
+                />
+                <PickerCard
+                  banner={BANNER_ANTIPATTERNS}
+                  alt="Anti-patrones"
+                  caption="Errores comunes y cómo evitarlos"
+                  onClick={() => setView({ kind: "antipatterns-deck" })}
+                />
+              </div>
             </div>
           )}
 
@@ -236,6 +258,23 @@ export function HandbookModal({ open, onClose }: Props) {
                 <AntiPatternCard key={ap.id} antiPattern={ap} />
               ))}
             </PatternsDeck>
+          )}
+
+          {view.kind === "rules" && (
+            <div className="mx-auto max-w-2xl">
+              <picture className="block overflow-hidden rounded-2xl ring-2 ring-inset ring-[--color-gold-500]/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+                <source srcSet={RULES_SHEET.avif} type="image/avif" />
+                <source srcSet={RULES_SHEET.webp} type="image/webp" />
+                <img
+                  src={RULES_SHEET.webp}
+                  alt="Instrucciones de la actividad — 10 pasos para jugar"
+                  draggable={false}
+                  loading="eager"
+                  decoding="async"
+                  className="block h-auto w-full"
+                />
+              </picture>
+            </div>
           )}
         </div>
       </div>

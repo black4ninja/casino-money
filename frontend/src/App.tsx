@@ -22,6 +22,7 @@ const CubileteReglas = lazy(() => import("./pages/juegos/CubileteReglas"));
 const TiraOPagaReglas = lazy(() => import("./pages/juegos/TiraOPagaReglas"));
 const YahtzeeReglas = lazy(() => import("./pages/juegos/YahtzeeReglas"));
 const DisplayCarrera = lazy(() => import("./pages/display/DisplayCarrera"));
+const DisplaySubasta = lazy(() => import("./pages/display/DisplaySubasta"));
 
 const AdminSession = lazy(() => import("./pages/admin/AdminSession"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -32,6 +33,9 @@ const AdminCasinos = lazy(() => import("./pages/admin/AdminCasinos"));
 const AdminCasinoDetail = lazy(() => import("./pages/admin/AdminCasinoDetail"));
 const AdminCasinoEconomy = lazy(() =>
   import("./pages/admin/AdminCasinoEconomy"),
+);
+const AdminCasinoSubasta = lazy(() =>
+  import("./pages/admin/AdminCasinoSubasta"),
 );
 
 const PlayerDashboard = lazy(() => import("./pages/player/PlayerDashboard"));
@@ -44,6 +48,7 @@ const PlayerIdentity = lazy(() => import("./pages/player/PlayerIdentity"));
 const PlayerReceive = lazy(() => import("./pages/player/PlayerReceive"));
 const PlayerPay = lazy(() => import("./pages/player/PlayerPay"));
 const PlayerTransfer = lazy(() => import("./pages/player/PlayerTransfer"));
+const PlayerSubasta = lazy(() => import("./pages/player/PlayerSubasta"));
 const PlayerHistory = lazy(() => import("./pages/player/PlayerHistory"));
 
 const DealerHome = lazy(() => import("./pages/dealer/DealerHome"));
@@ -98,6 +103,8 @@ export default function App() {
         <Route path="/juegos/yahtzee/reglas" element={<YahtzeeReglas />} />
         {/* Proyección pública de la Carrera de Patrones — sin auth. */}
         <Route path="/display/casino/:casinoId/carrera" element={<DisplayCarrera />} />
+        {/* Proyección pública de la subasta — sin auth. */}
+        <Route path="/display/casino/:casinoId/subasta" element={<DisplaySubasta />} />
 
         {/* Master admin panel (auth required) */}
         <Route
@@ -137,6 +144,14 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["master"]}>
               <AdminCasinoEconomy />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/casinos/:id/subasta"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <AdminCasinoSubasta />
             </ProtectedRoute>
           }
         />
@@ -190,6 +205,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["player", "master"]}>
                 <PlayerCarrera />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/casino/:casinoId/subasta"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerSubasta />
               </ProtectedRoute>
             }
           />

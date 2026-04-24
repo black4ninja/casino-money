@@ -29,6 +29,7 @@ function toEntity(obj: Parse.Object): Casino {
     departamentos,
     dealerIds,
     active: obj.get("active") ?? true,
+    subastaActive: obj.get("subastaActive") ?? false,
     exists: obj.get("exists") ?? true,
     createdAt: obj.createdAt ?? new Date(),
   });
@@ -84,6 +85,7 @@ export class ParseCasinoRepo implements CasinoRepo {
     obj.set("departamentos", []);
     obj.set("dealers", []);
     obj.set("active", true);
+    obj.set("subastaActive", false);
     obj.set("exists", true);
     await obj.save(null, { useMasterKey: true });
     return toEntity(obj);
@@ -122,6 +124,13 @@ export class ParseCasinoRepo implements CasinoRepo {
   async setActive(id: string, active: boolean): Promise<Casino> {
     const obj = await this.q().get(id, { useMasterKey: true });
     obj.set("active", active);
+    await obj.save(null, { useMasterKey: true });
+    return toEntity(obj);
+  }
+
+  async setSubastaActive(id: string, subastaActive: boolean): Promise<Casino> {
+    const obj = await this.q().get(id, { useMasterKey: true });
+    obj.set("subastaActive", subastaActive);
     await obj.save(null, { useMasterKey: true });
     return toEntity(obj);
   }

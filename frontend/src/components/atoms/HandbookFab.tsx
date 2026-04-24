@@ -13,7 +13,7 @@ export function HandbookFab({ onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="Abrir manual de patrones"
+      aria-label="Abrir manual"
       className={[
         "fixed z-40",
         "bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)]",

@@ -227,7 +227,7 @@ export default function PlayerDashboard() {
                     onClick={() => navigate(`/player/casino/${c.id}`)}
                     className="w-full sm:w-auto"
                   >
-                    ¡Pasa al salón! →
+                    ¡Pasa al salón!
                   </Button>
                 </li>
               ))}

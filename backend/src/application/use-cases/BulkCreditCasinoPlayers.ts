@@ -52,6 +52,7 @@ export class BulkCreditCasinoPlayersUseCase {
     const casino = await this.casinos.findById(input.casinoId);
     if (!casino) throw AuthError.tokenInvalid();
     if (!casino.active) throw AuthError.casinoArchived();
+    if (casino.subastaActive) throw AuthError.casinoInSubasta();
 
     const amountErr = validateAmount(input.amount);
     if (amountErr) throw AuthError.validation(amountErr);

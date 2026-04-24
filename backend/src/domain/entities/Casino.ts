@@ -17,6 +17,13 @@ export type CasinoProps = {
    */
   dealerIds: string[];
   active: boolean;
+  /**
+   * Modo subasta: cuando es true, todas las operaciones de dinero del casino
+   * quedan suspendidas (créditos bulk/individuales, cobros, transferencias
+   * jugador→jugador, tragamonedas, carrera). Se habilita el flujo paralelo
+   * de subasta que no mueve wallet, solo paletas de interés.
+   */
+  subastaActive: boolean;
   exists: boolean;
   createdAt: Date;
 };
@@ -41,6 +48,7 @@ export class Casino {
   readonly departamentos: string[];
   readonly dealerIds: string[];
   readonly active: boolean;
+  readonly subastaActive: boolean;
   readonly exists: boolean;
   readonly createdAt: Date;
 
@@ -51,6 +59,7 @@ export class Casino {
     this.departamentos = props.departamentos;
     this.dealerIds = props.dealerIds;
     this.active = props.active;
+    this.subastaActive = props.subastaActive;
     this.exists = props.exists;
     this.createdAt = props.createdAt;
   }
@@ -63,6 +72,7 @@ export class Casino {
       departamentos: this.departamentos,
       dealerIds: this.dealerIds,
       active: this.active,
+      subastaActive: this.subastaActive,
       exists: this.exists,
       createdAt: this.createdAt.toISOString(),
     };

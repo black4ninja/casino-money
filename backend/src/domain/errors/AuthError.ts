@@ -8,6 +8,7 @@ export type AuthErrorCode =
   | "INACTIVE_ACCOUNT"
   | "PASSWORD_REQUIRED"
   | "CASINO_ARCHIVED"
+  | "CASINO_IN_SUBASTA"
   | "VALIDATION";
 
 export class AuthError extends Error {
@@ -49,6 +50,13 @@ export class AuthError extends Error {
       "CASINO_ARCHIVED",
       409,
       "Casino is archived — reactivate it before crediting",
+    );
+  }
+  static casinoInSubasta() {
+    return new AuthError(
+      "CASINO_IN_SUBASTA",
+      409,
+      "Casino está en modo subasta — todas las operaciones de dinero están suspendidas",
     );
   }
   static validation(message: string) {

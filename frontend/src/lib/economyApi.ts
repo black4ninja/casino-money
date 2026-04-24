@@ -221,7 +221,8 @@ export type WalletTransaction = {
     | "slot_bet"
     | "slot_payout"
     | "carrera_bet"
-    | "carrera_payout";
+    | "carrera_payout"
+    | "auction_purchase";
   delta: number;
   balanceAfter: number | null;
   idempotencyKey: string;

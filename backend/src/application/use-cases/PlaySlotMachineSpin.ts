@@ -73,6 +73,7 @@ export class PlaySlotMachineSpinUseCase {
     const casino = await this.casinos.findById(input.casinoId);
     if (!casino) throw AuthError.validation("casino not found");
     if (!casino.active) throw AuthError.casinoArchived();
+    if (casino.subastaActive) throw AuthError.casinoInSubasta();
 
     if (!isBetLevel(input.bet)) {
       throw AuthError.validation("bet must be 100, 200 or 500");

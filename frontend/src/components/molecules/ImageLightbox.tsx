@@ -9,38 +9,26 @@ import {
 } from "react";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
-type Props = {
-  /**
-   * Full-resolution sources shown inside the modal. AVIF is served to
-   * browsers that can decode it; WebP is the fallback. Both pointing at
-   * the same visual content at matching dimensions.
-   */
+type ControlledModalProps = {
   sources: { avif: string; webp: string };
-  /** Alt for both the trigger and the enlarged copy. */
   alt: string;
-  /**
-   * The clickable trigger — typically the `<img>` already styled for the
-   * surrounding layout. Wrapping it in the lightbox adds click + keyboard
-   * open semantics without touching the child's styling.
-   */
-  children: ReactNode;
-  /** Extra classes for the trigger button wrapper. */
-  className?: string;
+  open: boolean;
+  onClose: () => void;
 };
 
 /**
- * Click-to-expand image viewer. Shows the child in place; on click/tap it
- * opens a full-viewport modal where the user can toggle 2× zoom. While
- * zoomed, the transform origin follows the pointer so moving the cursor
- * acts as a panning gesture (no drag event wiring needed). ESC, backdrop
- * click, or the × button close it.
- *
- * Reusable for any image that benefits from a detail view (score, rules
- * diagrams, pattern cards, future tutorials). Keep the wrapping <img>'s
- * styling inside `children` — the lightbox only touches trigger affordances.
+ * Controlled full-viewport image viewer. Backdrop + × + ESC + click-to-zoom,
+ * with transform-origin following the pointer while zoomed so panning is
+ * effortless. Split from ImageLightbox so callers that already have their
+ * own trigger (flip-cards, explicit "ver imagen" buttons) can open the
+ * viewer without wrapping their UI in ImageLightbox's own <button>.
  */
-export function ImageLightbox({ sources, alt, children, className }: Props) {
-  const [open, setOpen] = useState(false);
+export function ImageLightboxModal({
+  sources,
+  alt,
+  open,
+  onClose,
+}: ControlledModalProps) {
   const [zoomed, setZoomed] = useState(false);
   const originRef = useRef<HTMLImageElement | null>(null);
   const [origin, setOrigin] = useState<{ x: string; y: string }>({
@@ -49,10 +37,10 @@ export function ImageLightbox({ sources, alt, children, className }: Props) {
   });
 
   const close = useCallback(() => {
-    setOpen(false);
     setZoomed(false);
     setOrigin({ x: "50%", y: "50%" });
-  }, []);
+    onClose();
+  }, [onClose]);
 
   useBodyScrollLock(open);
 
@@ -64,6 +52,14 @@ export function ImageLightbox({ sources, alt, children, className }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
+
+  // Reset zoom state whenever the modal is closed externally.
+  useEffect(() => {
+    if (!open) {
+      setZoomed(false);
+      setOrigin({ x: "50%", y: "50%" });
+    }
+  }, [open]);
 
   function updateOriginFromPoint(clientX: number, clientY: number) {
     const el = originRef.current;
@@ -89,6 +85,94 @@ export function ImageLightbox({ sources, alt, children, className }: Props) {
     updateOriginFromPoint(t.clientX, t.clientY);
   }
 
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt}
+    >
+      <button
+        type="button"
+        aria-label="Cerrar"
+        onClick={close}
+        className="absolute inset-0 bg-black/85 backdrop-blur-sm"
+      />
+
+      <div className="relative z-10 flex max-h-full max-w-full items-center justify-center">
+        <picture>
+          <source srcSet={sources.avif} type="image/avif" />
+          <source srcSet={sources.webp} type="image/webp" />
+          <img
+            ref={originRef}
+            src={sources.webp}
+            alt={alt}
+            draggable={false}
+            onClick={() => setZoomed((z) => !z)}
+            onMouseMove={onMouseMove}
+            onTouchMove={onTouchMove}
+            onMouseLeave={() => setOrigin({ x: "50%", y: "50%" })}
+            className={[
+              "block max-h-[90vh] max-w-[95vw] select-none",
+              "transition-transform duration-200 ease-out",
+              "rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)]",
+              zoomed ? "scale-[2] cursor-zoom-out" : "scale-100 cursor-zoom-in",
+            ].join(" ")}
+            style={{ transformOrigin: `${origin.x} ${origin.y}` }}
+          />
+        </picture>
+
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Cerrar"
+          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-[--color-gold-500]/50 bg-[--color-smoke]/80 text-xl leading-none text-[--color-cream]/90 transition hover:border-[--color-gold-400] hover:text-[--color-ivory] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-gold-400]"
+        >
+          ×
+        </button>
+      </div>
+
+      <p
+        aria-hidden
+        className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55"
+      >
+        {zoomed ? "MOVÉ EL CURSOR PARA EXPLORAR · CLIC PARA ALEJAR" : "CLIC PARA HACER ZOOM"}
+      </p>
+    </div>
+  );
+}
+
+type Props = {
+  /**
+   * Full-resolution sources shown inside the modal. AVIF is served to
+   * browsers that can decode it; WebP is the fallback. Both pointing at
+   * the same visual content at matching dimensions.
+   */
+  sources: { avif: string; webp: string };
+  /** Alt for both the trigger and the enlarged copy. */
+  alt: string;
+  /**
+   * The clickable trigger — typically the `<img>` already styled for the
+   * surrounding layout. Wrapping it in the lightbox adds click + keyboard
+   * open semantics without touching the child's styling.
+   */
+  children: ReactNode;
+  /** Extra classes for the trigger button wrapper. */
+  className?: string;
+};
+
+/**
+ * Click-to-expand wrapper: renders `children` inside a trigger button and
+ * opens a zoomable lightbox on click. Prefer this when you have an inline
+ * image that should be zoomable in place. For "open externally" flows
+ * (e.g. a button that lives on the back of a flip-card), use
+ * {@link ImageLightboxModal} with your own trigger and state.
+ */
+export function ImageLightbox({ sources, alt, children, className }: Props) {
+  const [open, setOpen] = useState(false);
+
   return (
     <>
       <button
@@ -106,61 +190,12 @@ export function ImageLightbox({ sources, alt, children, className }: Props) {
         {children}
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
-          role="dialog"
-          aria-modal="true"
-          aria-label={alt}
-        >
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={close}
-            className="absolute inset-0 bg-black/85 backdrop-blur-sm"
-          />
-
-          <div className="relative z-10 flex max-h-full max-w-full items-center justify-center">
-            <picture>
-              <source srcSet={sources.avif} type="image/avif" />
-              <source srcSet={sources.webp} type="image/webp" />
-              <img
-                ref={originRef}
-                src={sources.webp}
-                alt={alt}
-                draggable={false}
-                onClick={() => setZoomed((z) => !z)}
-                onMouseMove={onMouseMove}
-                onTouchMove={onTouchMove}
-                onMouseLeave={() => setOrigin({ x: "50%", y: "50%" })}
-                className={[
-                  "block max-h-[90vh] max-w-[95vw] select-none",
-                  "transition-transform duration-200 ease-out",
-                  "rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)]",
-                  zoomed ? "scale-[2] cursor-zoom-out" : "scale-100 cursor-zoom-in",
-                ].join(" ")}
-                style={{ transformOrigin: `${origin.x} ${origin.y}` }}
-              />
-            </picture>
-
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Cerrar"
-              className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-[--color-gold-500]/50 bg-[--color-smoke]/80 text-xl leading-none text-[--color-cream]/90 transition hover:border-[--color-gold-400] hover:text-[--color-ivory] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-gold-400]"
-            >
-              ×
-            </button>
-          </div>
-
-          <p
-            aria-hidden
-            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55"
-          >
-            {zoomed ? "MOVÉ EL CURSOR PARA EXPLORAR · CLIC PARA ALEJAR" : "CLIC PARA HACER ZOOM"}
-          </p>
-        </div>
-      )}
+      <ImageLightboxModal
+        sources={sources}
+        alt={alt}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }

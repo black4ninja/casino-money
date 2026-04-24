@@ -18,6 +18,7 @@ import {
   apiCreateCasino,
   apiDeleteCasino,
   apiListCasinos,
+  apiSetCasinoSubasta,
   apiUnarchiveCasino,
   apiUpdateCasino,
   type Casino,
@@ -28,6 +29,8 @@ type Dialog =
   | { kind: "edit"; casino: Casino }
   | { kind: "archive"; casino: Casino }
   | { kind: "unarchive"; casino: Casino }
+  | { kind: "startSubasta"; casino: Casino }
+  | { kind: "stopSubasta"; casino: Casino }
   | { kind: "delete"; casino: Casino };
 
 /** Render an ISO date as Mexican-locale day label ("15 may 2026"). */
@@ -163,6 +166,21 @@ export default function AdminCasinos() {
     }
   }
 
+  async function handleSetSubasta(casino: Casino, subastaActive: boolean) {
+    setDialogLoading(true);
+    setDialogError(null);
+    try {
+      await withAuth((t) => apiSetCasinoSubasta(t, casino.id, subastaActive));
+      setDialog({ kind: "none" });
+      await load();
+    } catch (err) {
+      const e = err as ApiError;
+      setDialogError(e.message ?? "No se pudo cambiar el modo subasta");
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
   async function handleDelete(casino: Casino) {
     setDialogLoading(true);
     setDialogError(null);
@@ -201,12 +219,16 @@ export default function AdminCasinos() {
     {
       key: "active",
       header: "Estado",
-      cell: (c) =>
-        c.active ? (
-          <Badge tone="success">activo</Badge>
-        ) : (
-          <Badge tone="danger">archivado</Badge>
-        ),
+      cell: (c) => (
+        <div className="flex flex-wrap items-center gap-1">
+          {c.active ? (
+            <Badge tone="success">activo</Badge>
+          ) : (
+            <Badge tone="danger">archivado</Badge>
+          )}
+          {c.subastaActive && <Badge tone="gold">subasta</Badge>}
+        </div>
+      ),
     },
     {
       key: "createdAt",
@@ -217,7 +239,7 @@ export default function AdminCasinos() {
       key: "id",
       header: "Acciones",
       sortable: false,
-      minWidth: "340px",
+      minWidth: "420px",
       cell: (c) => (
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -237,6 +259,31 @@ export default function AdminCasinos() {
           >
             Editar
           </Button>
+          {c.active && (
+            c.subastaActive ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  setDialogError(null);
+                  setDialog({ kind: "stopSubasta", casino: c });
+                }}
+              >
+                Cerrar subasta
+              </Button>
+            ) : (
+              <Button
+                variant="gold"
+                size="sm"
+                onClick={() => {
+                  setDialogError(null);
+                  setDialog({ kind: "startSubasta", casino: c });
+                }}
+              >
+                Subasta
+              </Button>
+            )
+          )}
           {c.active ? (
             <Button
               variant="purple"
@@ -387,6 +434,57 @@ export default function AdminCasinos() {
         loading={dialogLoading}
         error={dialogError}
         onConfirm={() => dialogCasino && handleUnarchive(dialogCasino)}
+        onCancel={closeDialog}
+      />
+
+      <ConfirmDialog
+        open={dialog.kind === "startSubasta"}
+        title="Iniciar modo subasta"
+        description={
+          dialogCasino && (
+            <>
+              <p>
+                <span className="font-display text-[--color-ivory]">
+                  {dialogCasino.name}
+                </span>{" "}
+                entrará en modo subasta. Mientras esté activo:
+              </p>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-[--color-cream]/75">
+                <li>Se suspenden todas las operaciones de dinero (créditos, cobros, transferencias, tragamonedas, carrera).</li>
+                <li>Los jugadores verán un botón para entrar a la puja.</li>
+                <li>Tú controlas el valor y puedes reiniciar rondas desde el panel de subasta.</li>
+              </ul>
+            </>
+          )
+        }
+        tone="gold"
+        confirmLabel="Iniciar subasta"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogCasino && handleSetSubasta(dialogCasino, true)}
+        onCancel={closeDialog}
+      />
+
+      <ConfirmDialog
+        open={dialog.kind === "stopSubasta"}
+        title="Cerrar modo subasta"
+        description={
+          dialogCasino && (
+            <p>
+              Se volverán a habilitar todas las operaciones de dinero en{" "}
+              <span className="font-display text-[--color-ivory]">
+                {dialogCasino.name}
+              </span>
+              . El estado de la puja queda como último snapshot hasta el próximo
+              inicio.
+            </p>
+          )
+        }
+        tone="danger"
+        confirmLabel="Cerrar subasta"
+        loading={dialogLoading}
+        error={dialogError}
+        onConfirm={() => dialogCasino && handleSetSubasta(dialogCasino, false)}
         onCancel={closeDialog}
       />
 

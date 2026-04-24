@@ -5,6 +5,7 @@ import type { UpdateCasinoUseCase } from "../../../application/use-cases/UpdateC
 import type { SetCasinoActiveUseCase } from "../../../application/use-cases/SetCasinoActive.js";
 import type { DeleteCasinoUseCase } from "../../../application/use-cases/DeleteCasino.js";
 import type { ListCasinoPlayersUseCase } from "../../../application/use-cases/ListCasinoPlayers.js";
+import type { ToggleCasinoSubastaUseCase } from "../../../application/use-cases/ToggleCasinoSubasta.js";
 import type { CasinoRepo } from "../../../domain/ports/CasinoRepo.js";
 
 function resolveId(req: Request): string | null {
@@ -32,8 +33,33 @@ export class CasinoController {
     private readonly setCasinoActive: SetCasinoActiveUseCase,
     private readonly deleteCasino: DeleteCasinoUseCase,
     private readonly listCasinoPlayers: ListCasinoPlayersUseCase,
+    private readonly toggleSubasta: ToggleCasinoSubastaUseCase,
     private readonly casinos: CasinoRepo,
   ) {}
+
+  setSubasta = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = resolveId(req);
+      if (!id) {
+        res.status(400).json({ status: "error", message: "id required" });
+        return;
+      }
+      const { subastaActive } = req.body ?? {};
+      if (typeof subastaActive !== "boolean") {
+        res
+          .status(400)
+          .json({ status: "error", message: "subastaActive (boolean) required" });
+        return;
+      }
+      const casino = await this.toggleSubasta.execute({
+        casinoId: id,
+        subastaActive,
+      });
+      res.json({ casino: casino.toPublic() });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   list = async (_req: Request, res: Response, next: NextFunction) => {
     try {

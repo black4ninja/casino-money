@@ -408,6 +408,17 @@ export default function AdminCasinoDetail() {
                   >
                     Ver economía
                   </Button>
+                  {casino.subastaActive && (
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/admin/casinos/${id}/subasta`)
+                      }
+                    >
+                      ✋ Panel de subasta
+                    </Button>
+                  )}
                 </div>
               </div>
               <dl className="grid gap-3 sm:grid-cols-2">

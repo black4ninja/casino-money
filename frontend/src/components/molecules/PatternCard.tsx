@@ -6,6 +6,8 @@ import {
 import { PATTERN_HANDBOOK } from "@/domain/patternHandbook";
 import { MermaidDiagram } from "./MermaidDiagram";
 import { CodeBlock } from "./CodeBlock";
+import { ImageLightboxModal } from "./ImageLightbox";
+import { Button } from "@/components/atoms/Button";
 
 type BackTab = "uml" | "uses" | "code";
 
@@ -29,6 +31,7 @@ const TAB_LABELS: Record<BackTab, string> = {
 export function PatternCard({ pattern }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [tab, setTab] = useState<BackTab>("uml");
+  const [zoomOpen, setZoomOpen] = useState(false);
   const sources = patternImagePath(pattern);
   const handbook = PATTERN_HANDBOOK[pattern.id];
 
@@ -147,10 +150,40 @@ export function PatternCard({ pattern }: Props) {
                   </p>
                 )}
               </div>
+
+              {sources && (
+                <footer
+                  className="border-t border-[--color-gold-500]/20 bg-[--color-smoke]/60 px-4 py-3"
+                  onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <Button
+                    variant="info"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomOpen(true);
+                    }}
+                  >
+                    Ver imagen
+                  </Button>
+                </footer>
+              )}
             </div>
           </div>
         </div>
       </button>
+
+      {sources && (
+        <ImageLightboxModal
+          sources={sources}
+          alt={`Carta del patrón ${pattern.name}`}
+          open={zoomOpen}
+          onClose={() => setZoomOpen(false)}
+        />
+      )}
     </div>
   );
 }

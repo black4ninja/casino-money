@@ -33,6 +33,16 @@ const TARGETS = [
   { src: join(IMAGES_DIR, "banners", "creational.png"), ...BANNER_SETTINGS },
   { src: join(IMAGES_DIR, "banners", "structural.png"), ...BANNER_SETTINGS },
   { src: join(IMAGES_DIR, "banners", "behavioral.png"), ...BANNER_SETTINGS },
+  { src: join(IMAGES_DIR, "banners", "instrucciones.png"), ...BANNER_SETTINGS },
+  { src: join(IMAGES_DIR, "banners", "greedy.png"), ...BANNER_SETTINGS },
+  // Rules sheet is meant to be read, not glanced at — keep the full native
+  // width and bump WebP quality so small print stays crisp on zoom.
+  {
+    src: join(IMAGES_DIR, "banners", "reglas-casino.png"),
+    maxWidth: 1400,
+    avifQuality: 60,
+    webpQuality: 88,
+  },
 ];
 
 function fmtKB(bytes) {

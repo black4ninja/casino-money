@@ -23,6 +23,12 @@ export interface CasinoRepo {
   update(id: string, patch: UpdateCasinoInput): Promise<Casino>;
   /** Archive / unarchive — flips `active`. */
   setActive(id: string, active: boolean): Promise<Casino>;
+  /**
+   * Entra / sale de modo subasta. Flipa `subastaActive` sin tocar `active`.
+   * El casino sigue abierto pero suspende todas las operaciones monetarias
+   * hasta que se desactive el modo.
+   */
+  setSubastaActive(id: string, subastaActive: boolean): Promise<Casino>;
   /** Logical delete — sets exists=false AND active=false. Irreversible from UI. */
   softDelete(id: string): Promise<void>;
 }

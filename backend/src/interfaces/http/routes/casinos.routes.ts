@@ -16,6 +16,7 @@ export function casinoRoutes(
   router.patch("/:id", ctrl.update);
   router.post("/:id/archive", ctrl.archive);
   router.post("/:id/unarchive", ctrl.unarchive);
+  router.post("/:id/subasta", ctrl.setSubasta);
   router.delete("/:id", ctrl.delete);
   return router;
 }
