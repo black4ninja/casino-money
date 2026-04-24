@@ -68,9 +68,12 @@ export class PlacePatternRaceBetUseCase {
 
   async execute(input: PlacePatternRaceBetInput): Promise<PlacePatternRaceBetResult> {
     if (!input.actorId) throw AuthError.tokenInvalid();
-    if (input.actorRole !== "player") {
+    if (input.actorRole !== "player" && input.actorRole !== "dealer") {
+      // Los dealers apuestan contra su saldo de comisiones; masters siguen
+      // vetados para evitar que el staff ordenador apueste en sus propias
+      // carreras.
       throw AuthError.validation(
-        `La carrera de patrones es solo para jugadores (rol actual: ${input.actorRole}).`,
+        `La carrera de patrones es solo para jugadores y dealers (rol actual: ${input.actorRole}).`,
       );
     }
 

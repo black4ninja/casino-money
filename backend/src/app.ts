@@ -187,7 +187,7 @@ export async function createApp(env: Env): Promise<Express> {
   const setMesaActive = new SetMesaActiveUseCase(mesaRepo);
   const deleteMesa = new DeleteMesaUseCase(mesaRepo);
   const listMyMesas = new ListMyMesasUseCase(mesaRepo, casinoRepo);
-  const listMyCasinos = new ListMyCasinosUseCase(casinoRepo, userRepo);
+  const listMyCasinos = new ListMyCasinosUseCase(casinoRepo, userRepo, mesaRepo);
   const listMyCasinoMesas = new ListMyCasinoMesasUseCase(
     mesaRepo,
     casinoRepo,

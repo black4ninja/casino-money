@@ -36,6 +36,12 @@ export default function PlayerCarrera() {
   const { casinoId } = useParams<{ casinoId: string }>();
   const accessToken = useAuthStore((s) => s.accessToken);
   const refresh = useAuthStore((s) => s.refresh);
+  const role = useAuthStore((s) => s.user?.role);
+  // Back target role-aware: los dealers también entran a esta pantalla pero
+  // su home es /dealer, no /player/casino/:casinoId (que ni les deja el
+  // route guard).
+  const backTo =
+    role === "dealer" ? "/dealer" : `/player/casino/${casinoId ?? ""}`;
 
   const [casino, setCasino] = useState<Casino | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,10 +72,18 @@ export default function PlayerCarrera() {
     [accessToken, refresh],
   );
 
-  // Bootstrap: verificar acceso al casino + estado inicial.
+  // Bootstrap: estado inicial + (best-effort) datos del casino para el título.
+  //
+  // Antes verificábamos el acceso pidiendo `apiListMyCasinos` y buscando ahí
+  // el casinoId. Ese endpoint está pensado para el flujo del jugador (filtra
+  // por departamento) — para dealers hubo que extenderlo en backend y eso
+  // obligaba a restart + rebuild. Ahora confiamos en los endpoints directos
+  // (wallet/snapshot/bets): si el usuario no tiene acceso, el backend devuelve
+  // 403 y lo mostramos como error; si tiene, seguimos. El nombre del casino
+  // se intenta resolver en paralelo pero su ausencia no bloquea la pantalla.
   useEffect(() => {
     if (!casinoId) {
-      navigate("/player", { replace: true });
+      navigate(role === "dealer" ? "/dealer" : "/player", { replace: true });
       return;
     }
     aliveRef.current = true;
@@ -77,24 +91,42 @@ export default function PlayerCarrera() {
       setLoading(true);
       setError(null);
       try {
-        const { casinos } = await withAuth((t) => apiListMyCasinos(t));
-        if (!aliveRef.current) return;
-        const found = casinos.find((c) => c.id === casinoId);
-        if (!found) {
-          setError("Este casino no está disponible para ti en este momento.");
-          return;
-        }
-        setCasino(found);
-
-        const [wallet, snap, bets] = await Promise.all([
+        // Críticos: wallet + snapshot. Si cualquiera falla, la pantalla no
+        // tiene nada que mostrar y devolvemos el error.
+        const [wallet, snap] = await Promise.all([
           withAuth((t) => apiGetMyCasinoSlotWallet(t, casinoId)),
           apiGetPatternRaceCurrent(casinoId),
-          withAuth((t) => apiListMyPatternRaceBets(t, casinoId, 20)),
         ]);
         if (!aliveRef.current) return;
         setBalance(wallet.balance);
         setSnapshot(snap);
-        setMyBets(bets.bets);
+
+        // Best-effort: la lista de apuestas propias. Un backend viejo (antes
+        // del cambio que permite dealer) responde 400 acá; no queremos que
+        // eso bloquee toda la vista — simplemente mostramos lista vacía y
+        // el dealer ya puede apostar.
+        void withAuth((t) => apiListMyPatternRaceBets(t, casinoId, 20))
+          .then((res) => {
+            if (!aliveRef.current) return;
+            setMyBets(res.bets);
+          })
+          .catch(() => {
+            /* noop — la lista arranca vacía; se refrescará cuando el dealer
+             * coloque una apuesta (refreshMyBetsAndBalance). */
+          });
+
+        // Best-effort: resolver el nombre del casino para el título. Si
+        // apiListMyCasinos no devuelve este casino (p. ej. dealer contra un
+        // backend viejo), no pasa nada — ya tenemos todo lo crítico cargado.
+        void withAuth((t) => apiListMyCasinos(t))
+          .then(({ casinos }) => {
+            if (!aliveRef.current) return;
+            const found = casinos.find((c) => c.id === casinoId);
+            if (found) setCasino(found);
+          })
+          .catch(() => {
+            /* noop — el título cae al fallback. */
+          });
       } catch (err) {
         if (!aliveRef.current) return;
         const e = err as ApiError;
@@ -106,7 +138,7 @@ export default function PlayerCarrera() {
     return () => {
       aliveRef.current = false;
     };
-  }, [casinoId, navigate, withAuth]);
+  }, [casinoId, navigate, withAuth, role]);
 
   // Poll del snapshot cada 2s para mantener la pista viva.
   useEffect(() => {
@@ -141,17 +173,25 @@ export default function PlayerCarrera() {
 
   const refreshMyBetsAndBalance = useCallback(async () => {
     if (!casinoId) return;
-    try {
-      const [bets, wallet] = await Promise.all([
-        withAuth((t) => apiListMyPatternRaceBets(t, casinoId, 20)),
-        withAuth((t) => apiGetMyCasinoSlotWallet(t, casinoId)),
-      ]);
-      if (!aliveRef.current) return;
-      setMyBets(bets.bets);
-      setBalance(wallet.balance);
-    } catch {
-      // Ignorado; próxima actualización lo recoge.
-    }
+    // Las dos llamadas son independientes — si la lista de apuestas falla
+    // (p. ej. backend viejo rechazando dealer), el saldo igual se actualiza
+    // y la UI no queda pegada con datos viejos.
+    void withAuth((t) => apiListMyPatternRaceBets(t, casinoId, 20))
+      .then((res) => {
+        if (!aliveRef.current) return;
+        setMyBets(res.bets);
+      })
+      .catch(() => {
+        /* noop — lo recupera el siguiente tick. */
+      });
+    void withAuth((t) => apiGetMyCasinoSlotWallet(t, casinoId))
+      .then((wallet) => {
+        if (!aliveRef.current) return;
+        setBalance(wallet.balance);
+      })
+      .catch(() => {
+        /* noop. */
+      });
   }, [casinoId, withAuth]);
 
   const contestants: PatternRaceContestantPayload[] =
@@ -222,7 +262,7 @@ export default function PlayerCarrera() {
     <AppLayout
       title={title}
       subtitle="Carrera de Patrones"
-      back={{ to: `/player/casino/${casinoId ?? ""}`, label: "" }}
+      back={{ to: backTo, label: "" }}
     >
       {error && (
         <Card tone="night">
@@ -233,9 +273,7 @@ export default function PlayerCarrera() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() =>
-                navigate(`/player/casino/${casinoId ?? ""}`, { replace: true })
-              }
+              onClick={() => navigate(backTo, { replace: true })}
             >
               ← Volver
             </Button>

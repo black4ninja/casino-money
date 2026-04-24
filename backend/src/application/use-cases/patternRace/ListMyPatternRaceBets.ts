@@ -33,8 +33,10 @@ export class ListMyPatternRaceBetsUseCase {
   async execute(
     input: ListMyPatternRaceBetsInput,
   ): Promise<ListMyPatternRaceBetsResult> {
-    if (input.actorRole !== "player") {
-      throw AuthError.validation("solo jugadores pueden ver sus apuestas");
+    if (input.actorRole !== "player" && input.actorRole !== "dealer") {
+      throw AuthError.validation(
+        "solo jugadores y dealers pueden ver sus apuestas",
+      );
     }
     const casino = await this.casinos.findById(input.casinoId);
     if (!casino) throw AuthError.validation("casino not found");

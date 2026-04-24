@@ -195,7 +195,7 @@ export default function App() {
           <Route
             path="/player/casino/:casinoId/slots"
             element={
-              <ProtectedRoute allowedRoles={["player", "master"]}>
+              <ProtectedRoute allowedRoles={["player", "dealer", "master"]}>
                 <PlayerSlots />
               </ProtectedRoute>
             }
@@ -203,7 +203,7 @@ export default function App() {
           <Route
             path="/player/casino/:casinoId/carrera"
             element={
-              <ProtectedRoute allowedRoles={["player", "master"]}>
+              <ProtectedRoute allowedRoles={["player", "dealer", "master"]}>
                 <PlayerCarrera />
               </ProtectedRoute>
             }

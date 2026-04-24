@@ -366,6 +366,76 @@ function MesaBody({
   balanceLoading,
   onRefreshBalance,
 }: MesaBodyProps) {
+  const navigate = useNavigate();
+  const subastaActive = mesa.casino.subastaActive;
+  // Entradas a los minijuegos personales del dealer. Usan el mismo saldo de
+  // comisiones que el balanceCard de arriba — el 20% acumulado por cobros a
+  // jugadores se puede jugar en tragamonedas o apostar en la carrera de
+  // patrones. Estas pantallas son compartidas con el jugador; la ruta es
+  // la misma (/player/casino/:casinoId/{slots,carrera}) pero el back se
+  // ajusta al rol dentro de cada componente.
+  const gamesCard = (
+    <Card
+      tone="night"
+      className="mb-6 flex flex-col gap-3"
+      style={{ marginInline: 0 }}
+    >
+      <h3 className="font-display text-xl text-[--color-ivory]">
+        Diversión extra
+      </h3>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span aria-hidden className="text-2xl leading-none shrink-0">
+            🎰
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-lg text-[--color-ivory] truncate">
+              Tragamonedas
+            </div>
+          </div>
+        </div>
+        <Button
+          variant="gold"
+          size="sm"
+          onClick={() =>
+            navigate(`/player/casino/${mesa.casino.id}/slots`)
+          }
+          className="w-full sm:w-auto"
+          disabled={subastaActive}
+          title={subastaActive ? "Pausado durante la subasta" : undefined}
+        >
+          {subastaActive ? "Pausado" : "Jugar"}
+        </Button>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span aria-hidden className="text-2xl leading-none shrink-0">
+            🏁
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-lg text-[--color-ivory] truncate">
+              Carrera de Patrones
+            </div>
+            <div className="font-label text-[0.6rem] tracking-widest text-[--color-cream]/60">
+              Apuesta pasiva · corre sola cada 5 min
+            </div>
+          </div>
+        </div>
+        <Button
+          variant="info"
+          size="sm"
+          disabled={subastaActive}
+          title={subastaActive ? "Pausado durante la subasta" : undefined}
+          onClick={() =>
+            navigate(`/player/casino/${mesa.casino.id}/carrera`)
+          }
+          className="w-full sm:w-auto"
+        >
+          Apostar
+        </Button>
+      </div>
+    </Card>
+  );
   const balanceCard = (
     <Card
       tone="night"
@@ -454,6 +524,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         <DealerPayView casinoId={mesa.casino.id} canDeposit={canDeposit} />
       </>
     );
@@ -464,6 +535,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <BancaSabeReglasContent />}
       </>
     );
@@ -474,6 +546,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <PokerHoldemReglasContent />}
       </>
     );
@@ -484,6 +557,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <BlackjackReglasContent />}
       </>
     );
@@ -494,6 +568,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <ShowdownReglasContent />}
       </>
     );
@@ -504,6 +579,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <CubileteReglasContent />}
       </>
     );
@@ -514,6 +590,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <TiraOPagaReglasContent />}
       </>
     );
@@ -524,6 +601,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         {tab === "reglas" && <YahtzeeReglasContent />}
       </>
     );
@@ -534,6 +612,7 @@ function MesaBody({
       <>
         {archivedBanner}
         {balanceCard}
+        {gamesCard}
         <GamePlaceholder />
       </>
     );
@@ -543,6 +622,7 @@ function MesaBody({
     <>
       {archivedBanner}
       {balanceCard}
+      {gamesCard}
       {tab === "juego" && <RuletaGameView onSpinComplete={onSpinComplete} />}
       {tab === "reglas" && <RuletaReglasContent hideDigitalCTA />}
       {tab === "score" && (

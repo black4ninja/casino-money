@@ -19,6 +19,12 @@ export default function PlayerSlots() {
   const { casinoId } = useParams<{ casinoId: string }>();
   const accessToken = useAuthStore((s) => s.accessToken);
   const refresh = useAuthStore((s) => s.refresh);
+  const role = useAuthStore((s) => s.user?.role);
+  // Los dealers acceden al mismo juego pero su "home" es /dealer — el botón de
+  // volver y los redirects de error deben llevarlos allá en vez de al
+  // PlayerHome (que ni siquiera les abre por route guard).
+  const backTo =
+    role === "dealer" ? "/dealer" : `/player/casino/${casinoId ?? ""}`;
 
   const [casino, setCasino] = useState<Casino | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +46,15 @@ export default function PlayerSlots() {
     [accessToken, refresh],
   );
 
+  // Bootstrap: trae el saldo directamente. La validación de acceso la hace el
+  // backend via requireAuthMw sobre el endpoint de wallet — si el usuario no
+  // tiene acceso, devuelve error y lo mostramos. El nombre del casino se
+  // intenta resolver en paralelo (best-effort) sólo para mejorar el título;
+  // si no llega no bloquea nada. Así evitamos depender de apiListMyCasinos,
+  // que tiene filtros por rol que complicaban el flujo del dealer.
   useEffect(() => {
     if (!casinoId) {
-      navigate("/player", { replace: true });
+      navigate(role === "dealer" ? "/dealer" : "/player", { replace: true });
       return;
     }
     let cancelled = false;
@@ -50,20 +62,21 @@ export default function PlayerSlots() {
       setLoading(true);
       setError(null);
       try {
-        const { casinos } = await withAuth((t) => apiListMyCasinos(t));
-        if (cancelled) return;
-        const found = casinos.find((c) => c.id === casinoId);
-        if (!found) {
-          setError("Este casino no está disponible para ti en este momento.");
-          setCasino(null);
-          return;
-        }
-        setCasino(found);
-
         const wallet = await withAuth((t) =>
           apiGetMyCasinoSlotWallet(t, casinoId),
         );
-        if (!cancelled) setBalance(wallet.balance);
+        if (cancelled) return;
+        setBalance(wallet.balance);
+
+        void withAuth((t) => apiListMyCasinos(t))
+          .then(({ casinos }) => {
+            if (cancelled) return;
+            const found = casinos.find((c) => c.id === casinoId);
+            if (found) setCasino(found);
+          })
+          .catch(() => {
+            /* noop — el título cae al fallback. */
+          });
       } catch (err) {
         if (cancelled) return;
         const e = err as ApiError;
@@ -75,7 +88,7 @@ export default function PlayerSlots() {
     return () => {
       cancelled = true;
     };
-  }, [casinoId, navigate, withAuth]);
+  }, [casinoId, navigate, withAuth, role]);
 
   const title = casino?.name ?? (loading ? "Cargando…" : "Tragamonedas");
 
@@ -83,7 +96,7 @@ export default function PlayerSlots() {
     <AppLayout
       title={title}
       subtitle="Tragamonedas de patrones"
-      back={{ to: `/player/casino/${casinoId ?? ""}`, label: "" }}
+      back={{ to: backTo, label: "" }}
     >
       {error && (
         <Card tone="night">
@@ -97,7 +110,7 @@ export default function PlayerSlots() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/player/casino/${casinoId ?? ""}`, { replace: true })}
+              onClick={() => navigate(backTo, { replace: true })}
             >
               ← Volver
             </Button>
@@ -105,8 +118,8 @@ export default function PlayerSlots() {
         </Card>
       )}
 
-      {!error && casino && balance !== null && (
-        <SlotMachineGameView casinoId={casino.id} initialBalance={balance} />
+      {!error && casinoId && balance !== null && (
+        <SlotMachineGameView casinoId={casinoId} initialBalance={balance} />
       )}
 
       {!error && (loading || balance === null) && (

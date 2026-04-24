@@ -25,9 +25,9 @@ export class ListSlotMachineHistoryUseCase {
 
   async execute(input: ListSlotMachineHistoryInput): Promise<SlotMachineSpin[]> {
     if (!input.actorId) throw AuthError.tokenInvalid();
-    if (input.actorRole !== "player") {
+    if (input.actorRole !== "player" && input.actorRole !== "dealer") {
       throw AuthError.validation(
-        `El historial de tragamonedas es solo para jugadores (rol actual: ${input.actorRole}).`,
+        `El historial de tragamonedas es solo para jugadores y dealers (rol actual: ${input.actorRole}).`,
       );
     }
 

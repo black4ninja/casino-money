@@ -67,12 +67,12 @@ export class PlaySlotMachineSpinUseCase {
   async execute(input: PlaySlotMachineSpinInput): Promise<PlaySlotMachineSpinResult> {
     // 1. Validaciones básicas.
     if (!input.actorId) throw AuthError.tokenInvalid();
-    if (input.actorRole !== "player") {
-      // La tragamonedas es personal del jugador. Master/dealer no debería
-      // poder apostar desde su propia cuenta — crea un usuario de prueba
-      // con rol "player" para probarla.
+    if (input.actorRole !== "player" && input.actorRole !== "dealer") {
+      // Master no juega con su propia cuenta; players y dealers sí. Los
+      // dealers apuestan contra su saldo de comisiones (20% sobre cobros),
+      // igual que en la subasta.
       throw AuthError.validation(
-        `La tragamonedas es solo para jugadores (rol actual: ${input.actorRole}).`,
+        `La tragamonedas es solo para jugadores y dealers (rol actual: ${input.actorRole}).`,
       );
     }
 
