@@ -8,6 +8,8 @@ import {
 } from "react-router-dom";
 import { Card } from "@/components/atoms/Card";
 import { Badge } from "@/components/atoms/Badge";
+import { Balance } from "@/components/atoms/Balance";
+import { Button } from "@/components/atoms/Button";
 import { Tabs, type TabItem } from "@/components/molecules/Tabs";
 import { RuletaGameView } from "@/components/organisms/games/RuletaGameView";
 import { RuletaReglasContent } from "@/components/organisms/games/RuletaReglasContent";
@@ -28,6 +30,7 @@ import {
   apiRecordRouletteSpin,
   type RouletteSpin,
 } from "@/lib/rouletteSpinApi";
+import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
 import { findGame } from "@/domain/games";
 import { usePolling } from "@/hooks/usePolling";
 
@@ -82,6 +85,13 @@ export default function DealerMesaView() {
   const [lastSpinLoading, setLastSpinLoading] = useState(false);
   const [lastSpinError, setLastSpinError] = useState<string | null>(null);
 
+  // Saldo del dealer en este casino (crece con las comisiones del 20% de
+  // cada cobro que ejecuta). Se refresca cada 4s igual que el saldo del
+  // jugador en PlayerHome — así el dealer ve llegar la comisión en vivo
+  // justo después de confirmar un cobro.
+  const [balance, setBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
       if (!accessToken) throw { status: 401, message: "no token" } as ApiError;
@@ -126,6 +136,32 @@ export default function DealerMesaView() {
       cancelled = true;
     };
   }, [mesaId, withAuth]);
+
+  const casinoId = mesa?.casino.id ?? null;
+  const loadBalance = useCallback(async () => {
+    if (!casinoId) return;
+    setBalanceLoading(true);
+    try {
+      const wallet = await withAuth((t) =>
+        apiGetMyCasinoSlotWallet(t, casinoId),
+      );
+      setBalance(wallet.balance);
+    } catch {
+      setBalance((prev) => prev ?? 0);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [casinoId, withAuth]);
+
+  useEffect(() => {
+    if (!casinoId) return;
+    loadBalance();
+  }, [casinoId, loadBalance]);
+
+  usePolling(loadBalance, {
+    intervalMs: 4000,
+    paused: !casinoId,
+  });
 
   const refetchLastSpin = useCallback(async () => {
     if (!mesaId) return;
@@ -275,6 +311,9 @@ export default function DealerMesaView() {
             lastSpin={lastSpin}
             lastSpinLoading={lastSpinLoading}
             lastSpinError={lastSpinError}
+            balance={balance}
+            balanceLoading={balanceLoading}
+            onRefreshBalance={loadBalance}
           />
         )}
       </main>
@@ -307,6 +346,9 @@ type MesaBodyProps = {
   lastSpin: RouletteSpin | null;
   lastSpinLoading: boolean;
   lastSpinError: string | null;
+  balance: number | null;
+  balanceLoading: boolean;
+  onRefreshBalance: () => void;
 };
 
 /**
@@ -320,7 +362,40 @@ function MesaBody({
   lastSpin,
   lastSpinLoading,
   lastSpinError,
+  balance,
+  balanceLoading,
+  onRefreshBalance,
 }: MesaBodyProps) {
+  const balanceCard = (
+    <Card
+      tone="night"
+      className="mb-6 flex flex-col items-center gap-3 py-6"
+      style={{ marginInline: 0 }}
+    >
+      <p className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/60">
+        MI SALDO EN ESTE CASINO
+      </p>
+      {balanceLoading && balance === null ? (
+        <span className="font-display text-3xl text-[--color-cream]/40">…</span>
+      ) : (
+        <Balance amount={balance ?? 0} size="lg" />
+      )}
+      <p className="font-label text-[0.6rem] tracking-[0.25em] text-[--color-cream]/55 text-center">
+        Acumulado por comisiones del 20% en cada cobro a jugadores.
+        Úsalo para pujar durante la subasta.
+      </p>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRefreshBalance}
+        disabled={balanceLoading}
+        aria-label="Actualizar saldo"
+        title="Refrescar saldo"
+      >
+        {balanceLoading ? "Actualizando…" : "↻ Actualizar"}
+      </Button>
+    </Card>
+  );
   const archivedBanner = useMemo(() => {
     if (!mesa.casino.active) {
       return (
@@ -378,6 +453,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         <DealerPayView casinoId={mesa.casino.id} canDeposit={canDeposit} />
       </>
     );
@@ -387,6 +463,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <BancaSabeReglasContent />}
       </>
     );
@@ -396,6 +473,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <PokerHoldemReglasContent />}
       </>
     );
@@ -405,6 +483,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <BlackjackReglasContent />}
       </>
     );
@@ -414,6 +493,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <ShowdownReglasContent />}
       </>
     );
@@ -423,6 +503,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <CubileteReglasContent />}
       </>
     );
@@ -432,6 +513,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <TiraOPagaReglasContent />}
       </>
     );
@@ -441,6 +523,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         {tab === "reglas" && <YahtzeeReglasContent />}
       </>
     );
@@ -450,6 +533,7 @@ function MesaBody({
     return (
       <>
         {archivedBanner}
+        {balanceCard}
         <GamePlaceholder />
       </>
     );
@@ -458,6 +542,7 @@ function MesaBody({
   return (
     <>
       {archivedBanner}
+      {balanceCard}
       {tab === "juego" && <RuletaGameView onSpinComplete={onSpinComplete} />}
       {tab === "reglas" && <RuletaReglasContent hideDigitalCTA />}
       {tab === "score" && (

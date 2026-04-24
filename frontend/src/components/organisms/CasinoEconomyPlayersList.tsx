@@ -126,7 +126,7 @@ export function CasinoEconomyPlayersList({
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className="font-display text-lg truncate"
+                      className="font-display text-lg break-words"
                       style={{ color: "var(--color-gold-300)" }}
                     >
                       {displayName}
@@ -152,7 +152,7 @@ export function CasinoEconomyPlayersList({
                     {formatMxn(row.balance)}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full items-center gap-2 sm:w-auto">
                   {isPlayer && (
                     <Button
                       variant="primary"
@@ -164,6 +164,7 @@ export function CasinoEconomyPlayersList({
                           ? undefined
                           : "Reactiva el casino para depositar"
                       }
+                      className="flex-1 sm:flex-initial"
                     >
                       Depositar
                     </Button>
@@ -173,14 +174,15 @@ export function CasinoEconomyPlayersList({
                       variant="danger"
                       size="sm"
                       onClick={() => onDebit(row)}
-                      disabled={!canDeposit || row.balance <= 0}
+                      disabled={!canDeposit}
                       title={
                         !canDeposit
                           ? "Reactiva el casino para cobrar"
                           : row.balance <= 0
-                            ? "El jugador no tiene saldo"
+                            ? "El jugador no tiene saldo — el formulario te lo confirmará"
                             : undefined
                       }
+                      className="flex-1 sm:flex-initial"
                     >
                       Cobrar
                     </Button>
@@ -190,6 +192,7 @@ export function CasinoEconomyPlayersList({
                       variant="info"
                       size="sm"
                       onClick={() => onViewHistory(row)}
+                      className="flex-1 sm:flex-initial"
                     >
                       Historial
                     </Button>
