@@ -18,6 +18,7 @@ export function meRoutes(
   router.get("/casinos/:casinoId/mesas", ctrl.myCasinoMesas);
   router.get("/casinos/:casinoId/players", ctrl.myCasinoPlayers);
   router.post("/casinos/:casinoId/transfer-to-player", ctrl.transferToPlayer);
+  router.post("/casinos/:casinoId/greedy-reward", ctrl.claimGreedy);
   router.get(
     "/casinos/:casinoId/mesas/:mesaId/spin/last",
     ctrl.myCasinoMesaLastSpin,

@@ -192,3 +192,33 @@ export async function apiDeleteCasino(
   });
   if (!res.ok) throw await parseError(res);
 }
+
+export type ClaimGreedyRewardResponse = {
+  batchId: string;
+  balance: number;
+  outcome:
+    | { status: "credited"; balance: number }
+    | { status: "skipped"; balance: number | null }
+    | { status: "recovered"; balance: number }
+    | { status: "failed"; balance: null; reason: string };
+};
+
+/**
+ * Mini-clicker Greedy: el cliente acumula 10 toques locales sobre la imagen
+ * del banner y acá cobra +1 al wallet del jugador en este casino. Idempotente
+ * por `batchId` — si el POST falla y el cliente reintenta con el mismo id, el
+ * backend devuelve `skipped` sin duplicar el crédito.
+ */
+export async function apiClaimGreedyReward(
+  accessToken: string,
+  casinoId: string,
+  batchId: string,
+): Promise<ClaimGreedyRewardResponse> {
+  const res = await fetch(`${BASE}/me/casinos/${casinoId}/greedy-reward`, {
+    method: "POST",
+    headers: authedHeaders(accessToken, true),
+    body: JSON.stringify({ batchId }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}

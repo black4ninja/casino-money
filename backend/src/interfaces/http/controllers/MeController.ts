@@ -6,6 +6,7 @@ import type { ListMyCasinoPlayersUseCase } from "../../../application/use-cases/
 import type { GetMyCasinoMesaLastSpinUseCase } from "../../../application/use-cases/GetMyCasinoMesaLastSpin.js";
 import type { UpdateMyAliasUseCase } from "../../../application/use-cases/UpdateMyAlias.js";
 import type { TransferBetweenPlayersUseCase } from "../../../application/use-cases/TransferBetweenPlayers.js";
+import type { ClaimGreedyRewardUseCase } from "../../../application/use-cases/ClaimGreedyReward.js";
 
 export class MeController {
   constructor(
@@ -16,6 +17,7 @@ export class MeController {
     private readonly getMyCasinoMesaLastSpin: GetMyCasinoMesaLastSpinUseCase,
     private readonly updateMyAlias: UpdateMyAliasUseCase,
     private readonly transferBetweenPlayers: TransferBetweenPlayersUseCase,
+    private readonly claimGreedyReward: ClaimGreedyRewardUseCase,
   ) {}
 
   myMesas = async (req: Request, res: Response, next: NextFunction) => {
@@ -166,6 +168,36 @@ export class MeController {
         amount,
         batchId,
         note: noteValue,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  claimGreedy = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ status: "error", message: "not authenticated" });
+        return;
+      }
+      const casinoId = req.params.casinoId;
+      if (typeof casinoId !== "string" || !casinoId) {
+        res.status(400).json({ status: "error", message: "casinoId required" });
+        return;
+      }
+      const { batchId } = (req.body ?? {}) as { batchId?: unknown };
+      if (typeof batchId !== "string" || batchId.trim().length === 0) {
+        res
+          .status(400)
+          .json({ status: "error", message: "batchId is required" });
+        return;
+      }
+      const result = await this.claimGreedyReward.execute({
+        casinoId,
+        actorId: userId,
+        batchId,
       });
       res.json(result);
     } catch (err) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePolling } from "@/hooks/usePolling";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/templates/AppLayout";
@@ -8,11 +8,22 @@ import { Badge } from "@/components/atoms/Badge";
 import { Balance } from "@/components/atoms/Balance";
 import { useAuthStore } from "@/stores/authStore";
 import type { ApiError } from "@/lib/authApi";
-import { apiListMyCasinos, type Casino } from "@/lib/casinoApi";
+import {
+  apiClaimGreedyReward,
+  apiListMyCasinos,
+  type Casino,
+} from "@/lib/casinoApi";
 import { apiListMyCasinoMesas, type Mesa } from "@/lib/mesaApi";
 import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
 import { findGame, gameLabel } from "@/domain/games";
 import { TransferToPlayerModal } from "@/components/organisms/TransferToPlayerModal";
+
+/**
+ * Pasos locales por click en el banner Greedy. Cuando el contador llega a
+ * GREEDY_CLICKS_PER_REWARD, se cobra un crédito de +1 al servidor. Se usa un
+ * entero en lugar de 0.01 en float para evitar imprecisión al acumular.
+ */
+const GREEDY_CLICKS_PER_REWARD = 100;
 
 /**
  * /player/casino/:casinoId — the player has already authenticated and picked
@@ -38,6 +49,11 @@ export default function PlayerHome() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [greedySpinKey, setGreedySpinKey] = useState(0);
   const [greedySpinning, setGreedySpinning] = useState(false);
+  const [greedyClicks, setGreedyClicks] = useState(0);
+  const [greedyError, setGreedyError] = useState<string | null>(null);
+  // Evita disparar el crédito dos veces si el usuario clickea rápido mientras
+  // la petición del décimo toque sigue en vuelo.
+  const greedyClaimingRef = useRef(false);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -152,6 +168,45 @@ export default function PlayerHome() {
     navigate(`/player/casino/${casino.id}/mesa/${m.id}`);
   }
 
+  function handleGreedyClick() {
+    if (!casinoId) return;
+    if (casino?.subastaActive) return;
+    setGreedySpinKey((k) => k + 1);
+    setGreedySpinning(true);
+    setGreedyError(null);
+    setGreedyClicks((prev) => {
+      // Si ya estamos cobrando, clavamos el display en 1.00 mientras la red
+      // responde — así el usuario ve "llegué" en vez de un reset instantáneo.
+      if (greedyClaimingRef.current) return GREEDY_CLICKS_PER_REWARD;
+      const next = prev + 1;
+      if (next >= GREEDY_CLICKS_PER_REWARD) {
+        greedyClaimingRef.current = true;
+        // Un batchId por cobro. Si el POST falla, el usuario puede volver a
+        // llegar a 100 y reintentar — el nuevo batchId evita colisionar con el
+        // registro anterior, pero nada se duplica porque ese registro nunca
+        // llegó a committed (o si llegó, el outcome.skipped lo refleja).
+        const batchId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `greedy-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        withAuth((t) => apiClaimGreedyReward(t, casinoId, batchId))
+          .then((r) => {
+            setBalance(r.balance);
+          })
+          .catch((err) => {
+            const e = err as ApiError;
+            setGreedyError(e.message ?? "No se pudo cobrar el premio.");
+          })
+          .finally(() => {
+            greedyClaimingRef.current = false;
+            setGreedyClicks(0);
+          });
+        return GREEDY_CLICKS_PER_REWARD;
+      }
+      return next;
+    });
+  }
+
   const title = casino?.name ?? (casinoLoading ? "Cargando…" : "Casino");
 
   return (
@@ -203,35 +258,65 @@ export default function PlayerHome() {
             </Card>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setGreedySpinKey((k) => k + 1);
-              setGreedySpinning(true);
-            }}
-            aria-label="Greedy: la casa siempre gana"
-            className="block w-full overflow-hidden rounded-2xl ring-2 ring-inset ring-[--color-gold-500]/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)] transition hover:ring-[--color-gold-400] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[--color-gold-400]/70"
-            style={{ perspective: "1200px" }}
-          >
-            <picture className="block">
-              <source srcSet="/images/banners/greedy.avif" type="image/avif" />
-              <source srcSet="/images/banners/greedy.webp" type="image/webp" />
-              <img
-                key={`greedy-${greedySpinKey}`}
-                src="/images/banners/greedy.webp"
-                alt="Greedy — la casa siempre gana"
-                draggable={false}
-                loading="eager"
-                decoding="async"
-                onAnimationEnd={() => setGreedySpinning(false)}
-                className={[
-                  "block h-auto w-full select-none",
-                  greedySpinning ? "animate-card-twirl" : "",
-                ].join(" ")}
-                style={{ backfaceVisibility: "visible" }}
-              />
-            </picture>
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleGreedyClick}
+              disabled={casino.subastaActive}
+              aria-label="Greedy — toca para acumular fichas"
+              className="block w-full overflow-hidden rounded-2xl ring-2 ring-inset ring-[--color-gold-500]/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)] transition hover:ring-[--color-gold-400] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[--color-gold-400]/70 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ perspective: "1200px" }}
+            >
+              <picture className="block">
+                <source srcSet="/images/banners/greedy.avif" type="image/avif" />
+                <source srcSet="/images/banners/greedy.webp" type="image/webp" />
+                <img
+                  key={`greedy-${greedySpinKey}`}
+                  src="/images/banners/greedy.webp"
+                  alt="Greedy — la casa siempre gana"
+                  draggable={false}
+                  loading="eager"
+                  decoding="async"
+                  onAnimationEnd={() => setGreedySpinning(false)}
+                  className={[
+                    "block h-auto w-full select-none",
+                    greedySpinning ? "animate-card-twirl" : "",
+                  ].join(" ")}
+                  style={{ backfaceVisibility: "visible" }}
+                />
+              </picture>
+            </button>
+
+            <div
+              className="flex flex-col gap-1 rounded-xl bg-[--color-smoke]/60 px-3 py-2 ring-1 ring-inset ring-[--color-gold-500]/25"
+              aria-live="polite"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-label text-[0.6rem] uppercase tracking-[0.25em] text-[--color-cream]/70">
+                  Fichas rotas de Greedy
+                </span>
+                <span className="font-display text-sm text-[--color-gold-300]">
+                  {(greedyClicks / GREEDY_CLICKS_PER_REWARD).toFixed(2)} / 1.00
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[--color-felt-900]/70">
+                <div
+                  className="h-full bg-gradient-to-r from-[--color-gold-500] to-[--color-gold-300] transition-[width] duration-200"
+                  style={{
+                    width: `${(greedyClicks / GREEDY_CLICKS_PER_REWARD) * 100}%`,
+                  }}
+                />
+              </div>
+              {greedyError && (
+                <p
+                  className="font-label text-[0.65rem] tracking-wider text-[--color-carmine-400]"
+                  role="alert"
+                >
+                  {greedyError}
+                </p>
+              )}
+            </div>
+          </div>
 
           <Card tone="night" className="flex flex-col items-center gap-3 py-6">
             <p className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/60">

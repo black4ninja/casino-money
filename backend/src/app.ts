@@ -67,6 +67,7 @@ import { ListCasinoEconomyWalletsUseCase } from "./application/use-cases/ListCas
 import { ListPlayerCasinoTransactionsUseCase } from "./application/use-cases/ListPlayerCasinoTransactions.js";
 import { ListMyCasinoPlayersUseCase } from "./application/use-cases/ListMyCasinoPlayers.js";
 import { TransferBetweenPlayersUseCase } from "./application/use-cases/TransferBetweenPlayers.js";
+import { ClaimGreedyRewardUseCase } from "./application/use-cases/ClaimGreedyReward.js";
 import { ToggleCasinoSubastaUseCase } from "./application/use-cases/ToggleCasinoSubasta.js";
 import { GetCasinoAuctionUseCase } from "./application/use-cases/auction/GetCasinoAuction.js";
 import { SetAuctionInitialValueUseCase } from "./application/use-cases/auction/SetAuctionInitialValue.js";
@@ -218,6 +219,12 @@ export async function createApp(env: Env): Promise<Express> {
     walletRepo,
     walletTxRepo,
   );
+  const claimGreedyReward = new ClaimGreedyRewardUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+  );
   const toggleCasinoSubasta = new ToggleCasinoSubastaUseCase(casinoRepo);
   const getCasinoAuction = new GetCasinoAuctionUseCase(casinoRepo, auctionRepo);
   const setAuctionInitial = new SetAuctionInitialValueUseCase(
@@ -329,6 +336,7 @@ export async function createApp(env: Env): Promise<Express> {
     getMyCasinoMesaLastSpin,
     updateMyAlias,
     transferBetweenPlayers,
+    claimGreedyReward,
   );
   const spinController = new RouletteSpinController(recordSpin, getLastSpin);
   const economyController = new EconomyController(

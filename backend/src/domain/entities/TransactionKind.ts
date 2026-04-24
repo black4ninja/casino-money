@@ -10,10 +10,12 @@
  *   carrera_bet          → débito al apostar en la Carrera de Patrones.
  *   carrera_payout       → crédito del premio cuando la apuesta de la carrera gana.
  *   auction_purchase     → débito al ganador cuando el anunciador cierra con "Vendido".
+ *   greedy_reward        → crédito del mini-clicker Greedy; el jugador acumula
+ *                          10 toques locales y cobra +1 al saldo.
  *
  * Reglas de signo:
  *   global_credit, player_deposit, player_transfer_in, slot_payout,
- *     carrera_payout                                                 → delta > 0.
+ *     carrera_payout, greedy_reward                                   → delta > 0.
  *   player_debit, player_transfer_out, slot_bet, carrera_bet,
  *     auction_purchase                                                → delta < 0.
  */
@@ -27,7 +29,8 @@ export type TransactionKind =
   | "slot_payout"
   | "carrera_bet"
   | "carrera_payout"
-  | "auction_purchase";
+  | "auction_purchase"
+  | "greedy_reward";
 
 export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "global_credit",
@@ -40,6 +43,7 @@ export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "carrera_bet",
   "carrera_payout",
   "auction_purchase",
+  "greedy_reward",
 ] as const;
 
 export function isTransactionKind(value: unknown): value is TransactionKind {
