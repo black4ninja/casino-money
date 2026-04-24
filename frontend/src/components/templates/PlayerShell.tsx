@@ -9,15 +9,16 @@ const HandbookModal = lazy(() =>
 );
 
 /**
- * Shared chrome for every /player/* route. Hosts the handbook FAB + modal so
- * the pocket manual is one tap away regardless of which player screen they
- * are on. Deliberately transparent on purpose — we don't want to paint over
- * the wallpapers or gradients the individual pages paint themselves.
+ * Shared chrome for every /player/* route. Applies the landing-style fixed
+ * wallpaper (same image used on the /dealer routes and the Login screen) so
+ * the whole authenticated surface shares one cohesive visual environment.
+ * Hosts the handbook FAB + modal so the pocket manual is one tap away from
+ * any player screen.
  */
 export function PlayerShell() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="landing-bg-fixed min-h-screen">
       <Outlet />
       <HandbookFab onClick={() => setOpen(true)} />
       {open && (
@@ -25,6 +26,6 @@ export function PlayerShell() {
           <HandbookModal open={open} onClose={() => setOpen(false)} />
         </Suspense>
       )}
-    </>
+    </div>
   );
 }

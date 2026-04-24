@@ -335,9 +335,12 @@ button {
  * Modern browsers pick up the second declaration and override.
  *
  * `.landing-bg` is used on the Login screen (scrolls with content);
- * `.dealer-bg` extends it with fixed attachment for the /dealer routes.
+ * `.landing-bg-fixed` adds fixed attachment for the authenticated shells
+ * (/dealer/* and /player/*) so the casino wallpaper stays put as the user
+ * scrolls through their dashboards.
  */
-.landing-bg {
+.landing-bg,
+.landing-bg-fixed {
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
     url("/images/landing-bg.webp");
@@ -352,18 +355,6 @@ button {
   background-repeat: no-repeat;
 }
 
-.dealer-bg {
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-    url("/images/landing-bg.webp");
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-    image-set(
-      url("/images/landing-bg.avif") type("image/avif"),
-      url("/images/landing-bg.webp") type("image/webp")
-    );
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+.landing-bg-fixed {
   background-attachment: fixed;
 }

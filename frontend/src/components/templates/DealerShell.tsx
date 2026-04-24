@@ -9,7 +9,7 @@ import { Outlet } from "react-router-dom";
  */
 export function DealerShell() {
   return (
-    <div className="dealer-bg min-h-screen">
+    <div className="landing-bg-fixed min-h-screen">
       <Outlet />
     </div>
   );

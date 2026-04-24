@@ -32,14 +32,14 @@ export function HandbookFab({ onClick }: Props) {
       >
         <defs>
           <radialGradient id="handbook-chip-grad" cx="50%" cy="38%" r="58%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="60%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor="#0f2a7a" />
+            <stop offset="0%" stopColor="#a855f7" />
+            <stop offset="60%" stopColor="#7e22ce" />
+            <stop offset="100%" stopColor="#3b0764" />
           </radialGradient>
-          <radialGradient id="handbook-center-grad" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor="#f0d37d" />
-            <stop offset="60%" stopColor="#d4af37" />
-            <stop offset="100%" stopColor="#8a6a10" />
+          <radialGradient id="handbook-center-grad" cx="50%" cy="36%" r="62%">
+            <stop offset="0%" stopColor="#f3e8ff" />
+            <stop offset="55%" stopColor="#c084fc" />
+            <stop offset="100%" stopColor="#581c87" />
           </radialGradient>
         </defs>
         {/* Edge dashes (8 gold hashes) */}
@@ -84,23 +84,25 @@ export function HandbookFab({ onClick }: Props) {
         <g transform="translate(50 50)">
           <path
             d="M -11 -9 h 9 a 3 3 0 0 1 3 3 v 14 a 3 3 0 0 0 -3 -3 h -9 z"
-            fill="#0B1A14"
-            stroke="#0B1A14"
-            strokeWidth="0.5"
+            fill="#d4af37"
+            stroke="#8a6a10"
+            strokeWidth="0.6"
+            strokeLinejoin="round"
           />
           <path
             d="M 11 -9 h -9 a 3 3 0 0 0 -3 3 v 14 a 3 3 0 0 1 3 -3 h 9 z"
-            fill="#0B1A14"
-            stroke="#0B1A14"
-            strokeWidth="0.5"
+            fill="#d4af37"
+            stroke="#8a6a10"
+            strokeWidth="0.6"
+            strokeLinejoin="round"
           />
           <line
             x1="0"
             y1="-6"
             x2="0"
             y2="8"
-            stroke="#d4af37"
-            strokeWidth="0.6"
+            stroke="#8a6a10"
+            strokeWidth="0.8"
           />
         </g>
       </svg>

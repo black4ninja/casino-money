@@ -1,40 +1,66 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuthStore, verifyStoredSession } from "@/stores/authStore";
 import Login from "./pages/Login";
-import Ingest from "./pages/Ingest";
-import Simulator from "./pages/Simulator";
-import Juegos from "./pages/juegos/Juegos";
-import Ruleta from "./pages/juegos/Ruleta";
-import RuletaReglas from "./pages/juegos/RuletaReglas";
-import AdminSession from "./pages/admin/AdminSession";
-import AdminOverview from "./pages/admin/AdminOverview";
-import AdminCaja from "./pages/admin/AdminCaja";
-import AdminRoster from "./pages/admin/AdminRoster";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminCasinos from "./pages/admin/AdminCasinos";
-import AdminCasinoDetail from "./pages/admin/AdminCasinoDetail";
-import AdminCasinoEconomy from "./pages/admin/AdminCasinoEconomy";
-import PlayerDashboard from "./pages/player/PlayerDashboard";
-import PlayerHome from "./pages/player/PlayerHome";
-import PlayerMesaView from "./pages/player/PlayerMesaView";
-import PlayerSlots from "./pages/player/PlayerSlots";
-import PlayerWallet from "./pages/player/PlayerWallet";
-import PlayerIdentity from "./pages/player/PlayerIdentity";
-import PlayerReceive from "./pages/player/PlayerReceive";
-import PlayerPay from "./pages/player/PlayerPay";
-import PlayerTransfer from "./pages/player/PlayerTransfer";
-import PlayerHistory from "./pages/player/PlayerHistory";
-import DealerHome from "./pages/dealer/DealerHome";
-import DealerLogin from "./pages/dealer/DealerLogin";
-import DealerMenu from "./pages/dealer/DealerMenu";
-import DealerEmit from "./pages/dealer/DealerEmit";
-import DealerRedeem from "./pages/dealer/DealerRedeem";
-import DealerDashboard from "./pages/dealer/DealerDashboard";
-import DealerMesaView from "./pages/dealer/DealerMesaView";
 import { ProtectedRoute } from "@/components/templates/ProtectedRoute";
 import { DealerShell } from "@/components/templates/DealerShell";
 import { PlayerShell } from "@/components/templates/PlayerShell";
+
+// Everything except the Login screen is lazy — the first paint only has to
+// parse the landing + router + vendor core. Each role's pages ship in their
+// own chunk on demand so a player never pays for admin code (and vice versa).
+const Ingest = lazy(() => import("./pages/Ingest"));
+const Simulator = lazy(() => import("./pages/Simulator"));
+const Juegos = lazy(() => import("./pages/juegos/Juegos"));
+const Ruleta = lazy(() => import("./pages/juegos/Ruleta"));
+const RuletaReglas = lazy(() => import("./pages/juegos/RuletaReglas"));
+
+const AdminSession = lazy(() => import("./pages/admin/AdminSession"));
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminCaja = lazy(() => import("./pages/admin/AdminCaja"));
+const AdminRoster = lazy(() => import("./pages/admin/AdminRoster"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminCasinos = lazy(() => import("./pages/admin/AdminCasinos"));
+const AdminCasinoDetail = lazy(() => import("./pages/admin/AdminCasinoDetail"));
+const AdminCasinoEconomy = lazy(() =>
+  import("./pages/admin/AdminCasinoEconomy"),
+);
+
+const PlayerDashboard = lazy(() => import("./pages/player/PlayerDashboard"));
+const PlayerHome = lazy(() => import("./pages/player/PlayerHome"));
+const PlayerMesaView = lazy(() => import("./pages/player/PlayerMesaView"));
+const PlayerSlots = lazy(() => import("./pages/player/PlayerSlots"));
+const PlayerWallet = lazy(() => import("./pages/player/PlayerWallet"));
+const PlayerIdentity = lazy(() => import("./pages/player/PlayerIdentity"));
+const PlayerReceive = lazy(() => import("./pages/player/PlayerReceive"));
+const PlayerPay = lazy(() => import("./pages/player/PlayerPay"));
+const PlayerTransfer = lazy(() => import("./pages/player/PlayerTransfer"));
+const PlayerHistory = lazy(() => import("./pages/player/PlayerHistory"));
+
+const DealerHome = lazy(() => import("./pages/dealer/DealerHome"));
+const DealerLogin = lazy(() => import("./pages/dealer/DealerLogin"));
+const DealerMenu = lazy(() => import("./pages/dealer/DealerMenu"));
+const DealerEmit = lazy(() => import("./pages/dealer/DealerEmit"));
+const DealerRedeem = lazy(() => import("./pages/dealer/DealerRedeem"));
+const DealerDashboard = lazy(() => import("./pages/dealer/DealerDashboard"));
+const DealerMesaView = lazy(() => import("./pages/dealer/DealerMesaView"));
+
+/**
+ * Suspense fallback rendered between lazy route swaps. Kept minimal on
+ * purpose: a full-viewport centered spinner would flash noticeably on fast
+ * networks; this quiet felt backdrop reads as a transition, not a loading
+ * state, and doesn't stutter the eye.
+ */
+function RouteLoader() {
+  return (
+    <div
+      aria-hidden
+      className="flex min-h-screen items-center justify-center bg-[--color-felt-900]"
+    >
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-[--color-gold-500]/30 border-t-[--color-gold-400]" />
+    </div>
+  );
+}
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -45,136 +71,139 @@ export default function App() {
   }, [hydrate]);
 
   return (
-    <Routes>
-      {/* Public entry */}
-      <Route path="/" element={<Login />} />
-      <Route path="/ingest" element={<Ingest />} />
-      <Route path="/dev" element={<Simulator />} />
-      <Route path="/juegos" element={<Juegos />} />
-      <Route path="/juegos/ruleta" element={<Ruleta />} />
-      <Route path="/juegos/ruleta/reglas" element={<RuletaReglas />} />
+    <Suspense fallback={<RouteLoader />}>
+      <Routes>
+        {/* Public entry — NOT lazy so first paint has no suspense fallback. */}
+        <Route path="/" element={<Login />} />
+        <Route path="/ingest" element={<Ingest />} />
+        <Route path="/dev" element={<Simulator />} />
+        <Route path="/juegos" element={<Juegos />} />
+        <Route path="/juegos/ruleta" element={<Ruleta />} />
+        <Route path="/juegos/ruleta/reglas" element={<RuletaReglas />} />
 
-      {/* Master admin panel (auth required) */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={["master"]}>
-            <Navigate to="/admin/users" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute allowedRoles={["master"]}>
-            <AdminUsers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/casinos"
-        element={
-          <ProtectedRoute allowedRoles={["master"]}>
-            <AdminCasinos />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/casinos/:id"
-        element={
-          <ProtectedRoute allowedRoles={["master"]}>
-            <AdminCasinoDetail />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/casinos/:id/economy"
-        element={
-          <ProtectedRoute allowedRoles={["master"]}>
-            <AdminCasinoEconomy />
-          </ProtectedRoute>
-        }
-      />
+        {/* Master admin panel (auth required) */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <Navigate to="/admin/users" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/casinos"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <AdminCasinos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/casinos/:id"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <AdminCasinoDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/casinos/:id/economy"
+          element={
+            <ProtectedRoute allowedRoles={["master"]}>
+              <AdminCasinoEconomy />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Casino-session management — unprotected per current scope. */}
-      <Route path="/admin/session" element={<AdminSession />} />
-      <Route path="/admin/overview" element={<AdminOverview />} />
-      <Route path="/admin/caja" element={<AdminCaja />} />
-      <Route path="/admin/roster" element={<AdminRoster />} />
+        {/* Casino-session management — unprotected per current scope. */}
+        <Route path="/admin/session" element={<AdminSession />} />
+        <Route path="/admin/overview" element={<AdminOverview />} />
+        <Route path="/admin/caja" element={<AdminCaja />} />
+        <Route path="/admin/roster" element={<AdminRoster />} />
 
-      {/* Player area — master may also access. PlayerShell renders the handbook
-          FAB + modal on every /player/* route so the pocket reference is
-          always one tap away. Legacy /player/home still bounces to /player. */}
-      <Route path="/player/home" element={<Navigate to="/player" replace />} />
-      <Route element={<PlayerShell />}>
-        <Route
-          path="/player"
-          element={
-            <ProtectedRoute allowedRoles={["player", "master"]}>
-              <PlayerDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/player/casino/:casinoId"
-          element={
-            <ProtectedRoute allowedRoles={["player", "master"]}>
-              <PlayerHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/player/casino/:casinoId/mesa/:mesaId"
-          element={
-            <ProtectedRoute allowedRoles={["player", "master"]}>
-              <PlayerMesaView />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/player/casino/:casinoId/slots"
-          element={
-            <ProtectedRoute allowedRoles={["player", "master"]}>
-              <PlayerSlots />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/player/wallet" element={<PlayerWallet />} />
-        <Route path="/player/identity" element={<PlayerIdentity />} />
-        <Route path="/player/receive" element={<PlayerReceive />} />
-        <Route path="/player/pay" element={<PlayerPay />} />
-        <Route path="/player/transfer" element={<PlayerTransfer />} />
-        <Route path="/player/history" element={<PlayerHistory />} />
-      </Route>
+        {/* Player area — master may also access. PlayerShell renders the
+            handbook FAB + modal on every /player/* route so the pocket
+            reference is always one tap away. Legacy /player/home still
+            bounces to /player. */}
+        <Route path="/player/home" element={<Navigate to="/player" replace />} />
+        <Route element={<PlayerShell />}>
+          <Route
+            path="/player"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/casino/:casinoId"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/casino/:casinoId/mesa/:mesaId"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerMesaView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/casino/:casinoId/slots"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerSlots />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/player/wallet" element={<PlayerWallet />} />
+          <Route path="/player/identity" element={<PlayerIdentity />} />
+          <Route path="/player/receive" element={<PlayerReceive />} />
+          <Route path="/player/pay" element={<PlayerPay />} />
+          <Route path="/player/transfer" element={<PlayerTransfer />} />
+          <Route path="/player/history" element={<PlayerHistory />} />
+        </Route>
 
-      {/* Dealer area — nested under DealerShell so every /dealer/* page
-          inherits the landing-style background. Master may also access
-          per the role hierarchy. */}
-      <Route path="/dealer" element={<DealerShell />}>
-        <Route
-          index
-          element={
-            <ProtectedRoute allowedRoles={["dealer", "master"]}>
-              <DealerHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="mesa/:mesaId"
-          element={
-            <ProtectedRoute allowedRoles={["dealer", "master"]}>
-              <DealerMesaView />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="login" element={<DealerLogin />} />
-        <Route path="menu" element={<DealerMenu />} />
-        <Route path="emit" element={<DealerEmit />} />
-        <Route path="redeem" element={<DealerRedeem />} />
-        <Route path="stats" element={<DealerDashboard />} />
-      </Route>
+        {/* Dealer area — nested under DealerShell so every /dealer/* page
+            inherits the landing-style background. Master may also access
+            per the role hierarchy. */}
+        <Route path="/dealer" element={<DealerShell />}>
+          <Route
+            index
+            element={
+              <ProtectedRoute allowedRoles={["dealer", "master"]}>
+                <DealerHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="mesa/:mesaId"
+            element={
+              <ProtectedRoute allowedRoles={["dealer", "master"]}>
+                <DealerMesaView />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="login" element={<DealerLogin />} />
+          <Route path="menu" element={<DealerMenu />} />
+          <Route path="emit" element={<DealerEmit />} />
+          <Route path="redeem" element={<DealerRedeem />} />
+          <Route path="stats" element={<DealerDashboard />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

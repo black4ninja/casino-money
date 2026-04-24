@@ -87,7 +87,7 @@ export const SLOT_SYMBOLS: readonly SlotSymbol[] = [
   {
     id: "zero",
     name: "Comodín",
-    shortName: "0",
+    shortName: "Wild",
     kind: "wild",
     tone: "success",
     images: null,

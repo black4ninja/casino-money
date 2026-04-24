@@ -25,6 +25,35 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "src"),
       },
     },
+    build: {
+      // Route-level code splitting lives in App.tsx (React.lazy). Here we
+      // carve out the heaviest vendor buckets so they ship as their own
+      // chunks — that way the browser can parallelize downloads and, more
+      // importantly, cache them across deploys where our app code churns
+      // but the vendor code usually doesn't.
+      //
+      // `chunkSizeWarningLimit` is bumped to 1000 kB because the Parse SDK
+      // chunk sits right under 1 MB — expected given how much the SDK
+      // bundles. The warning is advisory only; it doesn't affect runtime.
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-parse": ["parse"],
+            "vendor-crypto": [
+              "@noble/ed25519",
+              "@noble/hashes",
+              "@noble/hashes/sha256",
+              "pako",
+              "qrcode",
+            ],
+            "vendor-scanner": ["@zxing/browser", "@zxing/library"],
+            "vendor-table": ["@tanstack/react-table"],
+          },
+        },
+      },
+    },
     server: {
       port: Number(env.VITE_PORT ?? 8484),
       strictPort: true,

@@ -83,7 +83,7 @@ export default function PlayerSlots() {
     <AppLayout
       title={title}
       subtitle="Tragamonedas de patrones"
-      back={{ to: `/player/casino/${casinoId ?? ""}`, label: "Al casino" }}
+      back={{ to: `/player/casino/${casinoId ?? ""}`, label: "" }}
     >
       {error && (
         <Card tone="night">

@@ -228,7 +228,7 @@ export function SlotMachineGameView({ casinoId, initialBalance }: Props) {
   const canPlay = !isSpinning && balance >= bet;
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-6 w-full">
       {/* Saldo + apuesta */}
       <Card tone="night" className="flex flex-col gap-3 w-full max-w-md">
         <div className="flex items-center justify-between">
@@ -274,22 +274,12 @@ export function SlotMachineGameView({ casinoId, initialBalance }: Props) {
         )}
       </Card>
 
-      {/* Máquina física: rodillos + palanca lateral */}
-      <div className="flex items-start gap-4">
+      {/* Máquina física: rodillos + palanca (lateral en desktop, debajo en móvil) */}
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 max-w-full">
         <Card
           tone="felt"
-          className="relative flex items-center justify-center gap-3 px-6 py-6 ring-2 ring-inset ring-[--color-gold-500]/60"
+          className="relative flex items-center justify-center gap-2 px-4 py-6 sm:gap-3 sm:px-6 ring-2 ring-inset ring-[--color-gold-500]/60"
         >
-          {/* Marquee de bulbs arriba */}
-          <div
-            aria-hidden
-            className="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-3 rounded-full bg-[--color-smoke]/85 px-4 py-1.5 ring-1 ring-inset ring-[--color-gold-500]/40"
-          >
-            {Array.from({ length: 7 }).map((_, i) => (
-              <NeonBulb key={i} delay={(i % 4) * 160} size={8} />
-            ))}
-          </div>
-
           <SlotMachineReel
             target={targets[0]}
             isSpinning={isSpinning}
@@ -314,27 +304,20 @@ export function SlotMachineGameView({ casinoId, initialBalance }: Props) {
             onLand={() => handleReelLand(2)}
             ariaLabel="Rodillo 3"
           />
-
-          {/* Marquee de bulbs abajo */}
-          <div
-            aria-hidden
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-3 rounded-full bg-[--color-smoke]/85 px-4 py-1.5 ring-1 ring-inset ring-[--color-gold-500]/40"
-          >
-            {Array.from({ length: 7 }).map((_, i) => (
-              <NeonBulb key={i} delay={((i + 2) % 4) * 160} size={8} />
-            ))}
-          </div>
         </Card>
 
-        {/* Palanca lateral */}
-        <div className="flex flex-col items-center gap-2 pt-2">
+        {/* Palanca — visible solo en ≥sm (lateral, swipeable). En móvil se
+            oculta para evitar que flote suelta; el botón "Jalar palanca" de
+            abajo es la acción primaria en tap. Touch-action:none para que
+            el swipe no scrollee la página mientras la tira. */}
+        <div className="hidden sm:flex flex-col items-center gap-2 pt-2">
           <p className="font-label text-[0.6rem] tracking-[0.3em] text-[--color-cream]/60">
-            DESLIZA
+            DESLIZA ↓
           </p>
           <svg
             viewBox="0 0 80 220"
-            width="60"
-            height="165"
+            width="54"
+            height="148"
             xmlns="http://www.w3.org/2000/svg"
             className="select-none [touch-action:none]"
             aria-hidden
@@ -417,11 +400,28 @@ export function SlotMachineGameView({ casinoId, initialBalance }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="ghost" size="sm" onClick={() => setShowRules((v) => !v)}>
-          {showRules ? "Ocultar reglas" : "Ver reglas"}
-        </Button>
-      </div>
+      {/* Acción primaria en móvil — botón grande. En ≥sm se usa el botón
+          pequeño del cluster de la palanca, así que aquí lo ocultamos. */}
+      <Button
+        variant="gold"
+        size="lg"
+        block
+        onClick={() => triggerSpin()}
+        disabled={!canPlay}
+        className="sm:hidden max-w-md"
+      >
+        {isSpinning ? "Girando…" : "🎰 Jalar palanca"}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="lg"
+        block
+        onClick={() => setShowRules((v) => !v)}
+        className="max-w-md"
+      >
+        {showRules ? "Ocultar reglas" : "Ver reglas"}
+      </Button>
 
       {showRules && <RulesPanel />}
 

@@ -1,27 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   SLOT_SYMBOLS,
   type SlotSymbol,
   type SlotSymbolId,
 } from "@/domain/slotSymbols";
 
-const CELL_H = 96; // px de una celda
-const STRIP_PADDING_SYMBOLS = 12; // símbolos randomizados antes del target
+const CELL_H = 80;
+const CELL_W = 84;
+const STRIP_PADDING_SYMBOLS = 18; // más símbolos = más velocidad percibida
+const OVERSHOOT_PX = 18; // "pasa" el target y regresa — simula inercia mecánica
+const SETTLE_MS = 220; // duración del micro-bounce de regreso
 
 type Props = {
   /** Símbolo donde debe aterrizar este rodillo. null ⇒ reposo. */
   target: SlotSymbolId | null;
   /** Trigger: cuando cambia de false→true con target presente, rueda. */
   isSpinning: boolean;
-  /** Duración total de giro del rodillo (distinta por rodillo para stagger). */
+  /** Duración total de la fase principal de giro (sin contar el settle). */
   durationMs: number;
   /** Ms a esperar antes de arrancar este rodillo — permite stagger entre 1/2/3. */
   startDelayMs: number;
-  /** Fires al terminar la transición de este rodillo. */
+  /** Fires al terminar el settle (el rodillo está quieto en el target). */
   onLand?: () => void;
   /** Accesibilidad: label describiendo el rodillo. */
   ariaLabel?: string;
 };
+
+type Phase = "idle" | "spinning" | "settling";
 
 function pickRandom<T>(arr: readonly T[]): T {
   const i = Math.floor(Math.random() * arr.length);
@@ -33,14 +38,20 @@ function symbolById(id: SlotSymbolId): SlotSymbol {
 }
 
 /**
- * Un rodillo de la tragamonedas. Construye dinámicamente una "tira" de
- * símbolos cuando empieza a girar: muchos símbolos aleatorios terminando en
- * el target. Anima `translateY` acumulado de 0 a -(strip.length-1)*CELL_H con
- * cubic-bezier para desacelerar; al acabar se emite `onLand`.
+ * Un rodillo de la tragamonedas. Dos fases de animación:
  *
- * Tras aterrizar, el rodillo queda con el target centrado (reset al estado
- * "de reposo" con translateY=0 y strip=[target, ...símbolos aleatorios] para
- * que el próximo giro no parta visualmente de un punto aleatorio).
+ *   1. `spinning` — construye una strip dinámica (padding random + target al
+ *      final) y anima `translateY` ~toda la strip, con un overshoot de
+ *      `OVERSHOOT_PX` para simular que el rodillo pasa ligeramente el target
+ *      por inercia. Curva cubic-bezier con arranque marcado y desaceleración
+ *      pronunciada. Motion blur CSS mientras se mueve.
+ *
+ *   2. `settling` — un micro-bounce spring que regresa de la posición con
+ *      overshoot a la posición exacta del target. Se siente mecánico
+ *      (peg-lock al stop). Al terminar dispara `onLand`.
+ *
+ * Al quedar `isSpinning=false` y `target` fijo, colapsa la strip a 3 celdas
+ * (reposo visual) para no cargar arrays grandes.
  */
 export function SlotMachineReel({
   target,
@@ -50,36 +61,28 @@ export function SlotMachineReel({
   onLand,
   ariaLabel,
 }: Props) {
-  // Estado visible: lista de símbolos apilados verticalmente (top→bottom),
-  // y el offset actual de translateY. La celda visible "activa" es el índice
-  // 1 de los 3 centrales (la fila central del grid 3×3).
   const [strip, setStrip] = useState<SlotSymbolId[]>(() => {
     const initial: SlotSymbolId[] = [];
     for (let i = 0; i < 3; i++) initial.push(pickRandom(SLOT_SYMBOLS).id);
     return initial;
   });
   const [offsetY, setOffsetY] = useState(0);
-  const [transitionActive, setTransitionActive] = useState(false);
-  const firstSpinRef = useRef(true);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const landedOffsetRef = useRef(0); // target final sin overshoot
 
-  // Compose a ver-pretty label for SR users.
   const centerSymbol = useMemo(() => {
     const idx = Math.min(1, strip.length - 1);
     return symbolById(strip[idx]!);
   }, [strip]);
 
-  // Arranca el giro cuando isSpinning pasa a true y hay target.
+  // Arranca el giro cuando isSpinning pasa a true con target presente.
   useEffect(() => {
     if (!isSpinning || target == null) return;
     let cancelled = false;
     let startTimer: number | null = null;
-    let endTimer: number | null = null;
+    let safetyTimer: number | null = null;
 
-    // Build a new strip: STRIP_PADDING_SYMBOLS aleatorios + target.
     const newStrip: SlotSymbolId[] = [];
-    // Mantenemos el símbolo central actual como primer elemento para que el
-    // inicio de la animación no haga "salto" visual (de target anterior a
-    // algo distinto). Reemplaza el símbolo de reposo en la posición 0.
     const resting = strip[1] ?? pickRandom(SLOT_SYMBOLS).id;
     newStrip.push(resting);
     for (let i = 0; i < STRIP_PADDING_SYMBOLS; i++) {
@@ -87,91 +90,120 @@ export function SlotMachineReel({
     }
     newStrip.push(target);
 
-    // Reset visual instantáneo a offsetY=0 con nueva strip.
-    setTransitionActive(false);
+    const cellsToAdvance = newStrip.length - 2;
+    const landedOffset = -cellsToAdvance * CELL_H;
+    landedOffsetRef.current = landedOffset;
+
+    // Reset visual instantáneo (phase=idle corta la transición).
+    setPhase("idle");
     setStrip(newStrip);
     setOffsetY(0);
 
-    // Next tick: activa transition y desplaza a la posición final.
     startTimer = window.setTimeout(() => {
       if (cancelled) return;
-      setTransitionActive(true);
-      // El target está en la ÚLTIMA posición de la strip. Para centrarlo en
-      // la posición central del viewport (que muestra los símbolos en
-      // índices 0,1,2 verticalmente, con 1 siendo el centro), necesitamos
-      // desplazar (newStrip.length - 2) celdas — esto coloca el target en
-      // el slot central y un símbolo aleatorio arriba y abajo.
-      const cellsToAdvance = newStrip.length - 2;
-      setOffsetY(-cellsToAdvance * CELL_H);
-    }, Math.max(0, startDelayMs) + (firstSpinRef.current ? 0 : 20));
-    firstSpinRef.current = false;
+      setPhase("spinning");
+      // Overshoot: va un poco más allá del target final por inercia.
+      setOffsetY(landedOffset - OVERSHOOT_PX);
+    }, Math.max(0, startDelayMs) + 20);
 
-    // Un timer de seguridad por si onTransitionEnd no dispara (cancelación,
-    // prefer-reduced-motion, cambio de ruta). Duración del giro + 250ms.
-    endTimer = window.setTimeout(
+    // Fallback por si onTransitionEnd no dispara en algún navegador raro o
+    // prefers-reduced-motion; dispara onLand tras la duración total esperada.
+    safetyTimer = window.setTimeout(
       () => {
         if (cancelled) return;
+        setPhase("idle");
+        setOffsetY(landedOffset);
         onLand?.();
       },
-      Math.max(0, startDelayMs) + durationMs + 250,
+      Math.max(0, startDelayMs) + durationMs + SETTLE_MS + 400,
     );
 
     return () => {
       cancelled = true;
       if (startTimer != null) window.clearTimeout(startTimer);
-      if (endTimer != null) window.clearTimeout(endTimer);
+      if (safetyTimer != null) window.clearTimeout(safetyTimer);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSpinning, target]);
 
-  // Cuando ya no estamos girando y el target se fijó, colapsa la strip al
-  // estado de reposo con el target en el centro. Evita mantener arrays
-  // gigantes en memoria.
+  // Colapsa la strip al estado de reposo cuando deja de girar.
   useEffect(() => {
     if (isSpinning || target == null) return;
-    const t = setTimeout(() => {
-      setTransitionActive(false);
-      setStrip([pickRandom(SLOT_SYMBOLS).id, target, pickRandom(SLOT_SYMBOLS).id]);
+    const t = window.setTimeout(() => {
+      setPhase("idle");
+      setStrip([
+        pickRandom(SLOT_SYMBOLS).id,
+        target,
+        pickRandom(SLOT_SYMBOLS).id,
+      ]);
       setOffsetY(0);
     }, 60);
-    return () => clearTimeout(t);
+    return () => window.clearTimeout(t);
   }, [isSpinning, target]);
 
-  const transitionCss = transitionActive
-    ? `transform ${durationMs}ms cubic-bezier(0.15, 0.82, 0.25, 0.99) ${Math.max(0, startDelayMs)}ms`
-    : "none";
+  // Transición + filtro dinámicos por fase.
+  const transitionCss =
+    phase === "spinning"
+      ? // Arranque con aceleración visible + desaceleración pronunciada.
+        `transform ${durationMs}ms cubic-bezier(0.33, 0.02, 0.15, 1) ${Math.max(0, startDelayMs)}ms`
+      : phase === "settling"
+        ? // Spring de regreso al target (rebote suave, sin overshoot visible).
+          `transform ${SETTLE_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`
+        : "none";
+
+  // Motion blur vertical mientras gira — pequeño pero perceptible.
+  const isMoving = phase === "spinning";
+  const filterCss = isMoving ? "blur(0.9px) saturate(1.05)" : "none";
+
+  const transformCss = `translate3d(0, ${offsetY}px, 0)`;
+
+  const innerStyle: CSSProperties = {
+    transform: transformCss,
+    transition: transitionCss,
+    filter: filterCss,
+    willChange: phase === "idle" ? "auto" : "transform, filter",
+  };
 
   return (
     <div
       role="img"
       aria-label={
         ariaLabel ??
-        (isSpinning
-          ? "Rodillo girando"
-          : `Rodillo en ${centerSymbol.name}`)
+        (isSpinning ? "Rodillo girando" : `Rodillo en ${centerSymbol.name}`)
       }
       className="relative overflow-hidden rounded-xl bg-[--color-smoke]/85 ring-2 ring-inset ring-[--color-gold-500]/50 shadow-[inset_0_6px_18px_rgba(0,0,0,0.65)]"
-      style={{
-        width: "112px",
-        height: `${CELL_H * 3}px`,
-      }}
+      style={{ width: `${CELL_W}px`, height: `${CELL_H * 3}px` }}
     >
+      {/* Vignette top/bottom para dar profundidad al viewport. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-6 z-20 bg-gradient-to-b from-black/55 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-6 z-20 bg-gradient-to-t from-black/55 to-transparent"
+      />
+
       {/* Highlight overlay para la fila central (la que cuenta). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-[96px] h-[96px] z-10 border-y-2 border-[--color-gold-400]/70 bg-gradient-to-b from-[--color-gold-500]/10 via-transparent to-[--color-gold-500]/10"
+        className="pointer-events-none absolute inset-x-0 z-10 border-y-2 border-[--color-gold-400]/70 bg-gradient-to-b from-[--color-gold-500]/10 via-transparent to-[--color-gold-500]/10"
+        style={{ top: `${CELL_H}px`, height: `${CELL_H}px` }}
       />
 
       <div
         onTransitionEnd={(e) => {
           if (e.propertyName !== "transform") return;
-          onLand?.();
+          if (phase === "spinning") {
+            // Termina la fase de overshoot → arranca el settle.
+            setPhase("settling");
+            setOffsetY(landedOffsetRef.current);
+          } else if (phase === "settling") {
+            setPhase("idle");
+            onLand?.();
+          }
         }}
-        style={{
-          transform: `translateY(${offsetY}px)`,
-          transition: transitionCss,
-          willChange: "transform",
-        }}
+        style={innerStyle}
       >
         {strip.map((id, i) => {
           const sym = symbolById(id);
@@ -179,10 +211,10 @@ export function SlotMachineReel({
             <div
               key={`${i}-${id}`}
               className={[
-                "flex flex-col items-center justify-center select-none",
+                "flex flex-col items-center justify-center gap-0.5 select-none",
                 toneBg(sym.tone),
               ].join(" ")}
-              style={{ width: "112px", height: `${CELL_H}px` }}
+              style={{ width: `${CELL_W}px`, height: `${CELL_H}px` }}
             >
               {sym.images ? (
                 <picture>
@@ -193,7 +225,7 @@ export function SlotMachineReel({
                     alt=""
                     aria-hidden
                     loading="lazy"
-                    className="h-14 w-14 rounded-md object-cover ring-1 ring-inset ring-white/25"
+                    className="h-11 w-11 rounded-md object-cover ring-1 ring-inset ring-white/25"
                   />
                 </picture>
               ) : (
@@ -202,7 +234,7 @@ export function SlotMachineReel({
                   className={[
                     "font-display leading-none select-none",
                     toneText(sym.tone),
-                    sym.kind === "anti" ? "text-3xl" : "text-4xl font-black",
+                    sym.kind === "anti" ? "text-2xl" : "text-3xl font-black",
                   ].join(" ")}
                 >
                   {sym.glyph}
@@ -210,7 +242,7 @@ export function SlotMachineReel({
               )}
               <span
                 className={[
-                  "mt-1 font-label text-[0.55rem] tracking-[0.12em] uppercase",
+                  "font-label text-[0.5rem] tracking-[0.1em] uppercase",
                   toneLabel(sym.tone),
                 ].join(" ")}
               >
