@@ -56,9 +56,9 @@ export function CasinoEconomyPlayersList({
     const q = normalize(query.trim());
     if (!q) return rows;
     return rows.filter((row) => {
-      const p = row.player;
+      const u = row.user;
       const haystack = normalize(
-        [p.fullName ?? "", p.alias ?? "", p.matricula ?? ""].join(" "),
+        [u.fullName ?? "", u.alias ?? "", u.matricula ?? ""].join(" "),
       );
       return haystack.includes(q);
     });
@@ -68,7 +68,7 @@ export function CasinoEconomyPlayersList({
     ? "Cargando…"
     : query.trim().length > 0
     ? `${filteredRows.length} de ${rows.length} · ${formatMxn(totalInCirculation)} en circulación`
-    : `${rows.length} jugador(es) · ${formatMxn(totalInCirculation)} en circulación`;
+    : `${rows.length} titular(es) · ${formatMxn(totalInCirculation)} en circulación`;
 
   return (
     <Card tone="night" className="flex flex-col gap-4">
@@ -109,12 +109,18 @@ export function CasinoEconomyPlayersList({
       {filteredRows.length > 0 && (
         <ul className="flex flex-col gap-2">
           {filteredRows.map((row) => {
-            const p = row.player;
+            const u = row.user;
             const displayName =
-              p.alias || p.fullName || p.matricula || "(sin nombre)";
+              u.alias || u.fullName || u.matricula || "(sin nombre)";
+            // Sólo players son destino de depósito/cobro. Dealers aparecen
+            // en la lista (para que el admin vea su saldo de comisiones)
+            // pero sin botones de acción — la comisión se genera sola al
+            // cobrar a un jugador, no hay flujo manual de "depositar al
+            // dealer".
+            const isPlayer = u.role === "player";
             return (
               <li
-                key={p.id}
+                key={u.id}
                 className="flex flex-wrap items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5"
               >
                 <div className="flex-1 min-w-0">
@@ -125,13 +131,16 @@ export function CasinoEconomyPlayersList({
                     >
                       {displayName}
                     </span>
+                    {u.role === "dealer" && (
+                      <Badge tone="info">Tallador</Badge>
+                    )}
                     {row.walletId === null && (
                       <Badge tone="neutral">sin monedero</Badge>
                     )}
                   </div>
-                  {p.departamento && (
+                  {u.departamento && (
                     <div className="mt-0.5 font-label text-[0.7rem] tracking-[0.25em] text-[--color-cream]/60">
-                      {p.departamento}
+                      {u.departamento}
                     </div>
                   )}
                 </div>
@@ -144,20 +153,22 @@ export function CasinoEconomyPlayersList({
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onDeposit(row)}
-                    disabled={!canDeposit}
-                    title={
-                      canDeposit
-                        ? undefined
-                        : "Reactiva el casino para depositar"
-                    }
-                  >
-                    Depositar
-                  </Button>
-                  {onDebit && (
+                  {isPlayer && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onDeposit(row)}
+                      disabled={!canDeposit}
+                      title={
+                        canDeposit
+                          ? undefined
+                          : "Reactiva el casino para depositar"
+                      }
+                    >
+                      Depositar
+                    </Button>
+                  )}
+                  {isPlayer && onDebit && (
                     <Button
                       variant="danger"
                       size="sm"

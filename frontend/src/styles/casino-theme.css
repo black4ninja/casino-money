@@ -377,3 +377,25 @@ button {
 .landing-bg-fixed {
   background-attachment: fixed;
 }
+
+/**
+ * En móvil (debajo del breakpoint md de Tailwind, 768px) servimos un
+ * fondo en formato portrait pensado para pantallas verticales — las
+ * fichas quedan centradas y se evita el crop feo del fondo landscape.
+ * Misma estrategia dual: WebP de fallback para navegadores sin image-set
+ * + image-set(avif, webp) para los modernos.
+ */
+@media (max-width: 767px) {
+  .landing-bg,
+  .landing-bg-fixed {
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+      url("/images/landing-bg-mobile.webp");
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+      image-set(
+        url("/images/landing-bg-mobile.avif") type("image/avif"),
+        url("/images/landing-bg-mobile.webp") type("image/webp")
+      );
+  }
+}

@@ -78,11 +78,12 @@ export class MarkAuctionSoldUseCase {
       );
     }
 
-    // Validación de saldo al momento del cierre. El jugador pudo haber
-    // transferido sus fichas después de pujar; si ya no alcanza, el
+    // Validación de saldo al momento del cierre. El ganador pudo haber
+    // transferido/gastado sus fichas después de pujar; si ya no alcanza, el
     // anunciador necesita reconciliar (reset + nueva puja, o algún otro
-    // acuerdo fuera del sistema).
-    const wallet = await this.wallets.findByCasinoAndPlayer(
+    // acuerdo fuera del sistema). El ganador puede ser player o dealer —
+    // ambos tienen wallet por la generalización `(casinoId, userId)`.
+    const wallet = await this.wallets.findByCasinoAndUser(
       input.casinoId,
       winnerId,
     );
@@ -101,7 +102,7 @@ export class MarkAuctionSoldUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: winnerId,
+        userId: winnerId,
         amount: -winningBid, // delta negativo = débito
         batchId,
         actorId: input.actorId,

@@ -74,6 +74,8 @@ export type CreditPlayerOutcome =
 export type CreditPlayerResult = {
   batchId: string;
   amount: number;
+  effectiveAmount: number;
+  appliedEvents: string[];
   playerId: string;
   outcome: CreditPlayerOutcome;
 };
@@ -100,11 +102,25 @@ export async function apiCreditPlayer(
   return res.json();
 }
 
+export type DealerCommissionSummary = {
+  dealerId: string;
+  amount: number;
+  outcome: CreditPlayerOutcome;
+};
+
 export type DebitPlayerResult = {
   batchId: string;
   amount: number;
+  effectiveAmount: number;
+  appliedEvents: string[];
   playerId: string;
   outcome: CreditPlayerOutcome;
+  /**
+   * Comisión que el backend acreditó al dealer operador. Null cuando el
+   * actor es master (sin comisión) o cuando el cobro es tan pequeño que
+   * la comisión redondeada queda en 0.
+   */
+  dealerCommission: DealerCommissionSummary | null;
 };
 
 /**
@@ -184,16 +200,17 @@ export async function apiListMyCasinoPlayers(
 }
 
 export type EconomyWalletRow = {
-  player: AuthUser;
+  /** Titular del wallet. Puede ser player del roster o dealer asignado al casino. */
+  user: AuthUser;
   walletId: string | null;
   balance: number;
   walletActive: boolean;
 };
 
 /**
- * Una fila por jugador del roster del casino con su balance actual. Si el
- * jugador aún no tiene monedero (nadie le ha acreditado), balance=0 y
- * walletId=null.
+ * Una fila por titular con wallet potencial en el casino: cada jugador del
+ * roster más cada dealer asignado. Si aún no tiene monedero (nadie le ha
+ * acreditado, ningún cobro le ha comisionado) balance=0 y walletId=null.
  */
 export async function apiListCasinoEconomyWallets(
   accessToken: string,
@@ -211,7 +228,7 @@ export type WalletTransaction = {
   id: string;
   walletId: string;
   casinoId: string;
-  playerId: string;
+  userId: string;
   kind:
     | "global_credit"
     | "player_deposit"
@@ -222,7 +239,9 @@ export type WalletTransaction = {
     | "slot_payout"
     | "carrera_bet"
     | "carrera_payout"
-    | "auction_purchase";
+    | "auction_purchase"
+    | "dealer_commission"
+    | "greedy_reward";
   delta: number;
   balanceAfter: number | null;
   idempotencyKey: string;

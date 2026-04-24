@@ -29,6 +29,7 @@ export type MyMesa = Mesa & {
     name: string;
     date: string;
     active: boolean;
+    subastaActive: boolean;
     exists: boolean;
     createdAt: string;
   };

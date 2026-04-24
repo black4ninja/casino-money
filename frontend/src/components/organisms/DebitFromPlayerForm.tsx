@@ -206,6 +206,12 @@ export function DebitFromPlayerForm({
                   result.outcome.balance ?? currentBalance,
                 )}`}
           </p>
+          {result.dealerCommission &&
+            result.dealerCommission.amount > 0 && (
+              <p className="mt-1 font-label text-xs tracking-wider text-[--color-gold-300]">
+                Comisión ganada: {formatMxn(result.dealerCommission.amount)}
+              </p>
+            )}
         </div>
       )}
 

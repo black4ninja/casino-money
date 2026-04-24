@@ -7,10 +7,11 @@ import { AuthError } from "../../../domain/errors/AuthError.js";
 
 export type RaiseAuctionPaddleInput = {
   casinoId: string;
-  playerId: string;
+  /** AppUser.id del pujador: puede ser un player del roster o un dealer asignado al casino. */
+  userId: string;
   /**
    * Monto ofertado. Debe ser múltiplo de 100, ≥ currentBid (o ≥ piso si
-   * aún no hay pujador), y > currentBid si otro jugador tiene la paleta
+   * aún no hay pujador), y > currentBid si otro usuario tiene la paleta
    * en alto (regla estándar de subasta: solo puedes entrar mejorando
    * la oferta actual).
    */
@@ -21,17 +22,23 @@ const BID_DENOMINATION = 100;
 const MAX_BID = 100_000_000;
 
 /**
- * El jugador levanta su paleta ofertando `amount`. El monto se convierte
- * en el nuevo `currentBid` y el jugador queda como pujador visible. No
- * mueve wallet: la transacción monetaria se resuelve al cerrar la puja.
+ * El usuario levanta su paleta ofertando `amount`. El monto se convierte
+ * en el nuevo `currentBid` y queda como pujador visible. No mueve wallet:
+ * la transacción monetaria se resuelve al cerrar la puja.
+ *
+ * Pueden pujar:
+ *   - **players** del roster (derivado de `casino.departamentos`),
+ *   - **dealers** asignados al casino (en `casino.dealerIds`) — pujan con
+ *     el saldo personal que han acumulado vía comisiones de cobro.
+ *   Masters están fuera: ellos conducen la subasta, no participan.
  *
  * Reglas:
  *   - casino en modo subasta activo,
- *   - jugador activo en el roster (departamento),
+ *   - usuario activo y con membresía válida (player → roster, dealer → lista),
  *   - ya hay un piso (`currentBid > 0`) — el anunciador abrió la ronda,
  *   - `amount` múltiplo de $100, dentro de [currentBid, MAX_BID],
  *   - si hay otro pujador, `amount > currentBid` (estás mejorando),
- *   - saldo del jugador en el casino ≥ `amount` (no puede pujar lo que
+ *   - saldo del usuario en el casino ≥ `amount` (no puede pujar lo que
  *     no puede pagar — el admin lo cobrará al cerrar).
  */
 export class RaiseAuctionPaddleUseCase {
@@ -51,19 +58,32 @@ export class RaiseAuctionPaddleUseCase {
       );
     }
 
-    const player = await this.users.findById(input.playerId);
-    if (!player) throw AuthError.tokenInvalid();
-    if (player.role !== "player") {
-      throw AuthError.validation("Solo los jugadores pueden pujar.");
-    }
-    if (!player.active) throw AuthError.inactiveAccount();
-    if (
-      player.departamento === null ||
-      !casino.departamentos.includes(player.departamento)
-    ) {
+    const bidder = await this.users.findById(input.userId);
+    if (!bidder) throw AuthError.tokenInvalid();
+    if (!bidder.active) throw AuthError.inactiveAccount();
+
+    if (bidder.role === "master") {
       throw AuthError.validation(
-        "No estás registrado en el roster de este casino.",
+        "Los masters conducen la subasta, no pueden pujar.",
       );
+    }
+    if (bidder.role === "player") {
+      if (
+        bidder.departamento === null ||
+        !casino.departamentos.includes(bidder.departamento)
+      ) {
+        throw AuthError.validation(
+          "No estás registrado en el roster de este casino.",
+        );
+      }
+    } else if (bidder.role === "dealer") {
+      if (!casino.dealerIds.includes(bidder.id)) {
+        throw AuthError.validation(
+          "No estás asignado como tallador de este casino.",
+        );
+      }
+    } else {
+      throw AuthError.validation("Rol no puede participar en subasta.");
     }
 
     const existing = await this.auctions.findByCasino(input.casinoId);
@@ -97,7 +117,7 @@ export class RaiseAuctionPaddleUseCase {
     // `amount === currentBid` con mismo bidder simplemente reafirma).
     if (
       existing.currentBidderId &&
-      existing.currentBidderId !== player.id &&
+      existing.currentBidderId !== bidder.id &&
       input.amount <= existing.currentBid
     ) {
       throw AuthError.validation(
@@ -107,9 +127,9 @@ export class RaiseAuctionPaddleUseCase {
 
     // Validación de saldo contra el MONTO OFERTADO (no el current), porque
     // si ganas vas a pagar lo que ofreciste, no el precio anterior.
-    const wallet = await this.wallets.findByCasinoAndPlayer(
+    const wallet = await this.wallets.findByCasinoAndUser(
       input.casinoId,
-      input.playerId,
+      input.userId,
     );
     const balance = wallet?.balance ?? 0;
     if (balance < input.amount) {
@@ -120,14 +140,14 @@ export class RaiseAuctionPaddleUseCase {
 
     // Alias del pujador denormalizado en el registro — evita al display
     // resolver usuarios y permite servir la vista pública sin auth.
-    const alias = player.alias || player.fullName || player.matricula;
+    const alias = bidder.alias || bidder.fullName || bidder.matricula;
 
     return this.auctions.upsertByCasino({
       casinoId: input.casinoId,
-      // La oferta del jugador se convierte en el nuevo precio vigente —
+      // La oferta se convierte en el nuevo precio vigente —
       // así el siguiente tendrá que superarla.
       currentBid: input.amount,
-      currentBidderId: player.id,
+      currentBidderId: bidder.id,
       currentBidderAlias: alias,
       lastConfirmedBid: existing.lastConfirmedBid,
       lastConfirmedBidderId: existing.lastConfirmedBidderId,

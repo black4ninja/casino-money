@@ -7,17 +7,17 @@ export type WalletTransactionProps = {
   id: string;
   walletId: string;
   casinoId: string;
-  playerId: string;
+  userId: string;
   kind: TransactionKind;
   /** Firmado. Positivo = crédito, negativo = débito. */
   delta: number;
   /** Saldo después de aplicar el delta. null mientras status="pending". */
   balanceAfter: number | null;
-  /** Único lógico por fila. Formato para bulk-credit: `${batchId}:${playerId}`. */
+  /** Único lógico por fila. Formato para bulk-credit: `${batchId}:${userId}`. */
   idempotencyKey: string;
   /** Agrupa todas las tx de una operación masiva. */
   batchId: string;
-  /** AppUser.id del master que disparó la operación. */
+  /** AppUser.id del staff que disparó la operación. */
   actorId: string;
   note: string | null;
   status: TransactionStatus;
@@ -39,7 +39,7 @@ export class WalletTransaction {
   readonly id: string;
   readonly walletId: string;
   readonly casinoId: string;
-  readonly playerId: string;
+  readonly userId: string;
   readonly kind: TransactionKind;
   readonly delta: number;
   readonly balanceAfter: number | null;
@@ -54,7 +54,7 @@ export class WalletTransaction {
     this.id = props.id;
     this.walletId = props.walletId;
     this.casinoId = props.casinoId;
-    this.playerId = props.playerId;
+    this.userId = props.userId;
     this.kind = props.kind;
     this.delta = props.delta;
     this.balanceAfter = props.balanceAfter;
@@ -71,7 +71,7 @@ export class WalletTransaction {
       id: this.id,
       walletId: this.walletId,
       casinoId: this.casinoId,
-      playerId: this.playerId,
+      userId: this.userId,
       kind: this.kind,
       delta: this.delta,
       balanceAfter: this.balanceAfter,

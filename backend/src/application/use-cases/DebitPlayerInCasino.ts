@@ -14,6 +14,7 @@ import {
   applyCasinoEventMultiplier,
   annotateNoteWithEvents,
 } from "./helpers/applyCasinoEventMultiplier.js";
+import { calcDealerCommission } from "./helpers/dealerCommission.js";
 
 export type DebitPlayerInCasinoInput = {
   casinoId: string;
@@ -23,6 +24,12 @@ export type DebitPlayerInCasinoInput = {
   batchId: string;
   actorId: string;
   note: string | null;
+};
+
+export type DealerCommissionSummary = {
+  dealerId: string;
+  amount: number;
+  outcome: CreditPlayerOutcome;
 };
 
 export type DebitPlayerInCasinoResult = {
@@ -35,6 +42,12 @@ export type DebitPlayerInCasinoResult = {
   appliedEvents: string[];
   playerId: string;
   outcome: CreditPlayerOutcome;
+  /**
+   * Comisión acreditada al dealer que ejecutó el cobro. Null cuando el actor
+   * no es dealer (masters no reciben comisión) o cuando la comisión calculada
+   * es 0 (cobros pequeños que redondean a cero).
+   */
+  dealerCommission: DealerCommissionSummary | null;
 };
 
 /**
@@ -43,6 +56,12 @@ export type DebitPlayerInCasinoResult = {
  * las mismas validaciones de amount/batchId/roster del depósito, pero
  * adicionalmente verifica que el jugador tenga saldo suficiente ANTES de
  * aplicar el débito — si no alcanza, se rechaza sin crear tx.
+ *
+ * Comisión del dealer: cuando el actor es un dealer (no master), un 20%
+ * del cobro efectivo (redondeado a múltiplos de 100) se acredita al wallet
+ * personal del dealer en el mismo casino, con kind=dealer_commission. Esto
+ * le permite acumular saldo para participar en subastas sin inflar la
+ * economía del juego — el 80% restante del cobro se sigue destruyendo.
  *
  * Casos de uso: canje de premios físicos, penalizaciones, correcciones de
  * saldo por parte de tallador o master durante la jornada.
@@ -108,7 +127,7 @@ export class DebitPlayerInCasinoUseCase {
     // Valida saldo suficiente contra el monto efectivo. `creditPlayerCore`
     // no bloquea negativos (lo aplica con `.increment` directo), así que es
     // responsabilidad del caller evitar dejar al jugador con saldo negativo.
-    const wallet = await this.wallets.findByCasinoAndPlayer(
+    const wallet = await this.wallets.findByCasinoAndUser(
       input.casinoId,
       input.playerId,
     );
@@ -128,7 +147,7 @@ export class DebitPlayerInCasinoUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.playerId,
+        userId: input.playerId,
         amount: boosted.amount, // ya es negativo (y eventualmente duplicado)
         batchId: trimmedBatchId,
         actorId: input.actorId,
@@ -137,12 +156,79 @@ export class DebitPlayerInCasinoUseCase {
       },
     );
 
+    // Acredita comisión al dealer SOLO si el débito del jugador fue exitoso
+    // (o ya estaba committed via idempotencia). Si el débito falló, no
+    // queremos regalar comisión sin que haya salido dinero del jugador.
+    const dealerCommission = await this.maybeCreditDealerCommission({
+      casinoId: input.casinoId,
+      actorId: input.actorId,
+      playerId: input.playerId,
+      effectiveCharge,
+      batchId: trimmedBatchId,
+      playerOutcome: outcome,
+      playerAlias: player.alias ?? player.fullName ?? player.matricula,
+    });
+
     return {
       batchId: trimmedBatchId,
       amount: input.amount,
       effectiveAmount: effectiveCharge,
       appliedEvents: boosted.appliedEventNames,
       playerId: input.playerId,
+      outcome,
+      dealerCommission,
+    };
+  }
+
+  private async maybeCreditDealerCommission(params: {
+    casinoId: string;
+    actorId: string;
+    playerId: string;
+    effectiveCharge: number;
+    batchId: string;
+    playerOutcome: CreditPlayerOutcome;
+    playerAlias: string;
+  }): Promise<DealerCommissionSummary | null> {
+    // Solo si el débito al jugador quedó firme (nuevo o idempotente).
+    // Un `failed` NO debe traducirse en comisión al dealer.
+    if (
+      params.playerOutcome.status !== "credited" &&
+      params.playerOutcome.status !== "skipped" &&
+      params.playerOutcome.status !== "recovered"
+    ) {
+      return null;
+    }
+
+    const commission = calcDealerCommission(params.effectiveCharge);
+    if (commission <= 0) return null;
+
+    const actor = await this.users.findById(params.actorId);
+    // Masters no reciben comisión (no son operadores de mesa).
+    // Si el actor no es encontrable o está inactivo, tampoco comisionamos.
+    if (!actor || !actor.active || actor.role !== "dealer") {
+      return null;
+    }
+
+    const outcome = await creditPlayerCore(
+      { wallets: this.wallets, walletTxs: this.walletTxs },
+      {
+        casinoId: params.casinoId,
+        userId: actor.id,
+        amount: commission,
+        batchId: params.batchId,
+        actorId: params.actorId,
+        note: `Comisión 20% por cobro a ${params.playerAlias} ($${params.effectiveCharge})`,
+        kind: "dealer_commission",
+        // Mismo batchId que el player_debit, pero distinto keySuffix →
+        // idempotencyKey distinto. Retries del cobro reusan esta llave y
+        // no duplican comisión.
+        keySuffix: "dealer_commission",
+      },
+    );
+
+    return {
+      dealerId: actor.id,
+      amount: commission,
       outcome,
     };
   }

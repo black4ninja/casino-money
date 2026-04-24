@@ -104,7 +104,7 @@ export class PlaySlotMachineSpinUseCase {
     //    estado persistido sin mover saldos.
     const existing = await this.spins.findByBatchId(batchId);
     if (existing) {
-      const wallet = await this.wallets.findByCasinoAndPlayer(
+      const wallet = await this.wallets.findByCasinoAndUser(
         input.casinoId,
         input.actorId,
       );
@@ -115,11 +115,11 @@ export class PlaySlotMachineSpinUseCase {
 
     // 3. Buscar/crear wallet y validar saldo.
     const wallet =
-      (await this.wallets.findByCasinoAndPlayer(
+      (await this.wallets.findByCasinoAndUser(
         input.casinoId,
         input.actorId,
       )) ??
-      (await this.wallets.createForCasinoAndPlayer(
+      (await this.wallets.createForCasinoAndUser(
         input.casinoId,
         input.actorId,
       ));
@@ -136,7 +136,7 @@ export class PlaySlotMachineSpinUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.actorId,
+        userId: input.actorId,
         amount: -input.bet,
         batchId,
         actorId: input.actorId,
@@ -182,7 +182,7 @@ export class PlaySlotMachineSpinUseCase {
         { wallets: this.wallets, walletTxs: this.walletTxs },
         {
           casinoId: input.casinoId,
-          playerId: input.actorId,
+          userId: input.actorId,
           amount: payout,
           batchId,
           actorId: input.actorId,
@@ -198,7 +198,7 @@ export class PlaySlotMachineSpinUseCase {
         console.warn(
           `[slots] payout credit failed for spin batch=${batchId}: ${credit.status === "failed" ? credit.reason : "null balance"}`,
         );
-        const walletAfter = await this.wallets.findByCasinoAndPlayer(
+        const walletAfter = await this.wallets.findByCasinoAndUser(
           input.casinoId,
           input.actorId,
         );
@@ -210,7 +210,7 @@ export class PlaySlotMachineSpinUseCase {
       balanceAfter =
         debit.status === "credited" || debit.status === "recovered"
           ? debit.balance
-          : (await this.wallets.findByCasinoAndPlayer(input.casinoId, input.actorId))
+          : (await this.wallets.findByCasinoAndUser(input.casinoId, input.actorId))
               ?.balance ?? 0;
     }
 

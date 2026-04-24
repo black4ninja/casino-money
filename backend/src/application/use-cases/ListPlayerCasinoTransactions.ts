@@ -29,7 +29,7 @@ export class ListPlayerCasinoTransactionsUseCase {
     if (!casino) throw AuthError.tokenInvalid();
     const player = await this.users.findById(input.playerId);
     if (!player) throw AuthError.validation("player not found");
-    return this.walletTxs.listByCasinoAndPlayer(
+    return this.walletTxs.listByCasinoAndUser(
       input.casinoId,
       input.playerId,
       input.limit,

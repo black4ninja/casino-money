@@ -35,11 +35,11 @@ export class GetMyCasinoWalletUseCase {
     if (!casino) throw AuthError.validation("casino not found");
 
     // Lectura tolerante: cualquier rol autenticado puede consultar su saldo
-    // en un casino (master/dealer simplemente no tienen wallet y devolverán
-    // balance=0, lazy=true). La restricción de "solo players juegan" vive
-    // en `PlaySlotMachineSpin`, no aquí — así la página carga sin fricción
-    // incluso para usuarios que solo la están explorando.
-    const wallet = await this.wallets.findByCasinoAndPlayer(
+    // en un casino. Dealers tienen wallet propio alimentado por comisiones
+    // de cobro; masters normalmente devuelven balance=0, lazy=true salvo
+    // que alguna vez hayan participado como dealers. La restricción de
+    // "solo players juegan" vive en `PlaySlotMachineSpin`, no aquí.
+    const wallet = await this.wallets.findByCasinoAndUser(
       input.casinoId,
       input.actorId,
     );

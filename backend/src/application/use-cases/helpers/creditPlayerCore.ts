@@ -15,7 +15,7 @@ export type CreditPlayerCoreDeps = {
 
 export type CreditPlayerCoreInput = {
   casinoId: string;
-  playerId: string;
+  userId: string;
   amount: number;
   batchId: string;
   actorId: string;
@@ -25,21 +25,22 @@ export type CreditPlayerCoreInput = {
    * Sufijo opcional del idempotencyKey. Útil cuando una misma "operación
    * lógica" (mismo batchId) genera múltiples txs distinguibles — p. ej. la
    * tragamonedas emite "bet" y "payout" por cada spin y necesita dos llaves
-   * únicas. Omitir para mantener el comportamiento histórico `batchId:player`.
+   * únicas, o el `player_debit` que además acredita una comisión al dealer.
+   * Omitir para mantener el comportamiento histórico `batchId:user`.
    */
   keySuffix?: string;
 };
 
 /**
- * Algoritmo idempotente para aplicar un delta al wallet de un jugador. El
+ * Algoritmo idempotente para aplicar un delta al wallet de un usuario. El
  * nombre "credit" es legacy — acepta también deltas negativos (débitos) para
  * kinds como `slot_bet`, donde el flujo es: validar saldo en el caller, luego
  * invocar este helper con `amount < 0` para descontar. `$inc` de Mongo maneja
  * signo libremente y sigue siendo atómico. Compartido entre bulk-credit,
- * depósitos individuales y apuestas de la tragamonedas.
+ * depósitos individuales, apuestas de la tragamonedas y la comisión del dealer.
  *
  * Garantías:
- *   - `idempotencyKey = ${batchId}:${playerId}` previene doble-aplicación en
+ *   - `idempotencyKey = ${batchId}:${userId}` previene doble-aplicación en
  *     reintentos con el mismo batchId.
  *   - `WalletRepo.incrementBalance` usa Parse `.increment()` → `$inc` de
  *     Mongo, atómico a nivel documento.
@@ -53,15 +54,15 @@ export type CreditPlayerCoreInput = {
  * Quien llama debe haber validado previamente: casino existe y active,
  * amount dentro del rango esperado para su kind (positivo para créditos,
  * negativo para débitos), batchId no-vacío, actorId no-vacío, y para débitos
- * que el jugador tenga saldo suficiente.
+ * que el usuario tenga saldo suficiente.
  */
 export async function creditPlayerCore(
   deps: CreditPlayerCoreDeps,
   input: CreditPlayerCoreInput,
 ): Promise<CreditPlayerOutcome> {
   const key = input.keySuffix
-    ? `${input.batchId}:${input.playerId}:${input.keySuffix}`
-    : `${input.batchId}:${input.playerId}`;
+    ? `${input.batchId}:${input.userId}:${input.keySuffix}`
+    : `${input.batchId}:${input.userId}`;
   const existing = await deps.walletTxs.findByIdempotencyKey(key);
 
   if (
@@ -73,9 +74,9 @@ export async function creditPlayerCore(
   }
 
   if (existing && existing.status === "pending") {
-    const wallet = await deps.wallets.findByCasinoAndPlayer(
+    const wallet = await deps.wallets.findByCasinoAndUser(
       input.casinoId,
-      input.playerId,
+      input.userId,
     );
     if (!wallet) {
       return {
@@ -90,19 +91,19 @@ export async function creditPlayerCore(
 
   // Caso nuevo (o tx fallida previa — creamos una nueva con el mismo key).
   const wallet =
-    (await deps.wallets.findByCasinoAndPlayer(
+    (await deps.wallets.findByCasinoAndUser(
       input.casinoId,
-      input.playerId,
+      input.userId,
     )) ??
-    (await deps.wallets.createForCasinoAndPlayer(
+    (await deps.wallets.createForCasinoAndUser(
       input.casinoId,
-      input.playerId,
+      input.userId,
     ));
 
   const tx = await deps.walletTxs.createPending({
     walletId: wallet.id,
     casinoId: input.casinoId,
-    playerId: input.playerId,
+    userId: input.userId,
     kind: input.kind,
     delta: input.amount,
     idempotencyKey: key,

@@ -93,7 +93,7 @@ export class ClaimGreedyRewardUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.actorId,
+        userId: input.actorId,
         amount,
         batchId,
         actorId: input.actorId,
@@ -108,7 +108,7 @@ export class ClaimGreedyRewardUseCase {
     } else {
       // Falló el increment — devolvemos el último saldo conocido para que la
       // UI refresque sin mostrar un placeholder raro.
-      const wallet = await this.wallets.findByCasinoAndPlayer(
+      const wallet = await this.wallets.findByCasinoAndUser(
         input.casinoId,
         input.actorId,
       );

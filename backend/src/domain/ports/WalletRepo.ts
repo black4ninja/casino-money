@@ -1,14 +1,14 @@
 import type { Wallet } from "../entities/Wallet.js";
 
 export interface WalletRepo {
-  findByCasinoAndPlayer(
+  findByCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
   ): Promise<Wallet | null>;
   /** Crea un wallet nuevo con balance=0, active=true, exists=true. */
-  createForCasinoAndPlayer(
+  createForCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
   ): Promise<Wallet>;
   /**
    * Incrementa atómicamente el balance via Parse `.increment()` (Mongo `$inc`).
@@ -17,5 +17,5 @@ export interface WalletRepo {
    */
   incrementBalance(walletId: string, delta: number): Promise<number>;
   findByCasino(casinoId: string): Promise<Wallet[]>;
-  findByPlayer(playerId: string): Promise<Wallet[]>;
+  findByUser(userId: string): Promise<Wallet[]>;
 }

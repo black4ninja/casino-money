@@ -14,10 +14,13 @@ function pointerId(obj: unknown): string | null {
   return null;
 }
 
+// Nota Parse: el pointer field se llama "player" por legado — apunta a
+// AppUser de cualquier rol (player o dealer). Mantener el nombre evita
+// migrar datos existentes; el dominio lo expone como `userId`.
 function toEntity(obj: Parse.Object): Wallet {
   const casinoId = pointerId(obj.get("casino"));
-  const playerId = pointerId(obj.get("player"));
-  if (!casinoId || !playerId) {
+  const userId = pointerId(obj.get("player"));
+  if (!casinoId || !userId) {
     throw new Error(`Wallet ${obj.id} has invalid pointers`);
   }
   const balanceRaw = obj.get("balance");
@@ -25,7 +28,7 @@ function toEntity(obj: Parse.Object): Wallet {
   return new Wallet({
     id: obj.id as string,
     casinoId,
-    playerId,
+    userId,
     balance,
     active: obj.get("active") ?? true,
     exists: obj.get("exists") ?? true,
@@ -51,35 +54,35 @@ export class ParseWalletRepo implements WalletRepo {
     return Obj.createWithoutData(casinoId);
   }
 
-  private userPointer(playerId: string): Parse.Object {
+  private userPointer(userId: string): Parse.Object {
     const Obj = this.parse.Object.extend(USER_CLASS);
-    return Obj.createWithoutData(playerId);
+    return Obj.createWithoutData(userId);
   }
 
-  async findByCasinoAndPlayer(
+  async findByCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
   ): Promise<Wallet | null> {
     // Parse no soporta unique compound indexes custom: si una race creó dos
-    // wallets para el mismo (casino, player), devolvemos la más vieja — el
+    // wallets para el mismo (casino, user), devolvemos la más vieja — el
     // idempotencyKey de WalletTransaction es lo que realmente previene doble
     // crédito.
     const obj = await this.qAlive()
       .equalTo("casino", this.casinoPointer(casinoId))
-      .equalTo("player", this.userPointer(playerId))
+      .equalTo("player", this.userPointer(userId))
       .ascending("createdAt")
       .first({ useMasterKey: true });
     return obj ? toEntity(obj) : null;
   }
 
-  async createForCasinoAndPlayer(
+  async createForCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
   ): Promise<Wallet> {
     const Obj = this.parse.Object.extend(CLASS);
     const obj = new Obj();
     obj.set("casino", this.casinoPointer(casinoId));
-    obj.set("player", this.userPointer(playerId));
+    obj.set("player", this.userPointer(userId));
     obj.set("balance", 0);
     obj.set("active", true);
     obj.set("exists", true);
@@ -106,9 +109,9 @@ export class ParseWalletRepo implements WalletRepo {
     return results.map(toEntity);
   }
 
-  async findByPlayer(playerId: string): Promise<Wallet[]> {
+  async findByUser(userId: string): Promise<Wallet[]> {
     const results = await this.qAlive()
-      .equalTo("player", this.userPointer(playerId))
+      .equalTo("player", this.userPointer(userId))
       .ascending("createdAt")
       .limit(1000)
       .find({ useMasterKey: true });

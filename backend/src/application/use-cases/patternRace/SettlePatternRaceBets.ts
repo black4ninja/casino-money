@@ -127,7 +127,7 @@ export class SettlePatternRaceBetsUseCase {
         { wallets: this.wallets, walletTxs: this.walletTxs },
         {
           casinoId: bet.casinoId,
-          playerId: bet.playerId,
+          userId: bet.playerId,
           amount: payout,
           batchId: bet.betBatchId,
           actorId: bet.playerId,
@@ -163,7 +163,7 @@ export class SettlePatternRaceBetsUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: bet.casinoId,
-        playerId: bet.playerId,
+        userId: bet.playerId,
         amount: bet.amount,
         batchId: bet.betBatchId,
         actorId: bet.playerId,

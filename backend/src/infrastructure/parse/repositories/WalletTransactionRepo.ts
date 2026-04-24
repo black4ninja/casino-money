@@ -22,11 +22,13 @@ function pointerId(obj: unknown): string | null {
   return null;
 }
 
+// Nota Parse: el pointer field se llama "player" por legado — apunta a
+// AppUser de cualquier rol. El dominio lo expone como `userId`.
 function toEntity(obj: Parse.Object): WalletTransaction {
   const walletId = pointerId(obj.get("wallet"));
   const casinoId = pointerId(obj.get("casino"));
-  const playerId = pointerId(obj.get("player"));
-  if (!walletId || !casinoId || !playerId) {
+  const userId = pointerId(obj.get("player"));
+  if (!walletId || !casinoId || !userId) {
     throw new Error(`WalletTransaction ${obj.id} has invalid pointers`);
   }
   const kind = obj.get("kind");
@@ -46,7 +48,7 @@ function toEntity(obj: Parse.Object): WalletTransaction {
     id: obj.id as string,
     walletId,
     casinoId,
-    playerId,
+    userId,
     kind,
     delta: obj.get("delta") ?? 0,
     balanceAfter:
@@ -79,9 +81,9 @@ export class ParseWalletTransactionRepo implements WalletTransactionRepo {
     return Obj.createWithoutData(casinoId);
   }
 
-  private userPointer(playerId: string): Parse.Object {
+  private userPointer(userId: string): Parse.Object {
     const Obj = this.parse.Object.extend(USER_CLASS);
-    return Obj.createWithoutData(playerId);
+    return Obj.createWithoutData(userId);
   }
 
   async findByIdempotencyKey(key: string): Promise<WalletTransaction | null> {
@@ -99,7 +101,7 @@ export class ParseWalletTransactionRepo implements WalletTransactionRepo {
     const obj = new Obj();
     obj.set("wallet", this.walletPointer(input.walletId));
     obj.set("casino", this.casinoPointer(input.casinoId));
-    obj.set("player", this.userPointer(input.playerId));
+    obj.set("player", this.userPointer(input.userId));
     obj.set("kind", input.kind);
     obj.set("delta", input.delta);
     obj.set("balanceAfter", null);
@@ -168,14 +170,14 @@ export class ParseWalletTransactionRepo implements WalletTransactionRepo {
     return results.map(toEntity);
   }
 
-  async listByCasinoAndPlayer(
+  async listByCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
     limit = 200,
   ): Promise<WalletTransaction[]> {
     const results = await this.q()
       .equalTo("casino", this.casinoPointer(casinoId))
-      .equalTo("player", this.userPointer(playerId))
+      .equalTo("player", this.userPointer(userId))
       .descending("createdAt")
       .limit(limit)
       .find({ useMasterKey: true });

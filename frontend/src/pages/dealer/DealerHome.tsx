@@ -7,7 +7,9 @@ import { Badge } from "@/components/atoms/Badge";
 import { useAuthStore } from "@/stores/authStore";
 import type { ApiError } from "@/lib/authApi";
 import { apiListMyMesas, type MyMesa } from "@/lib/mesaApi";
+import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
 import { findGame } from "@/domain/games";
+import { formatMxn } from "@/components/molecules/AmountPicker";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -117,7 +119,9 @@ export default function DealerHome() {
         )}
 
         {!mesasLoading &&
-          myMesas.map((m) => <MyMesaCard key={m.id} mesa={m} />)}
+          myMesas.map((m) => (
+            <MyMesaCard key={m.id} mesa={m} withAuth={withAuth} />
+          ))}
 
         <div className="mt-8 px-4 pb-4">
           <Button
@@ -134,13 +138,37 @@ export default function DealerHome() {
   );
 }
 
-function MyMesaCard({ mesa }: { mesa: MyMesa }) {
+function MyMesaCard({
+  mesa,
+  withAuth,
+}: {
+  mesa: MyMesa;
+  withAuth: <T>(fn: (token: string) => Promise<T>) => Promise<T>;
+}) {
   const navigate = useNavigate();
   const game = findGame(mesa.gameType);
   const label = game?.name ?? mesa.gameType;
   const emoji = game?.emoji ?? "◆";
   const casinoArchived = !mesa.casino.active;
   const mesaArchived = !mesa.active;
+
+  // Saldo personal del dealer en este casino (alimentado por las comisiones
+  // del 20% de cada cobro que ejecuta). Se consulta al endpoint genérico
+  // de wallet (role-agnostic) para no duplicar backend.
+  const [balance, setBalance] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    withAuth((t) => apiGetMyCasinoSlotWallet(t, mesa.casino.id))
+      .then((r) => {
+        if (!cancelled) setBalance(r.balance);
+      })
+      .catch(() => {
+        // Silencioso: si falla el fetch del saldo, no bloqueamos la card.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mesa.casino.id, withAuth]);
 
   return (
     <Card
@@ -167,6 +195,16 @@ function MyMesaCard({ mesa }: { mesa: MyMesa }) {
           <div className="font-label text-xs tracking-wider text-[--color-cream]/60">
             {formatDate(mesa.casino.date)}
           </div>
+          {balance !== null && (
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="font-label text-[0.6rem] tracking-[0.3em] text-[--color-cream]/55">
+                Mis comisiones
+              </span>
+              <span className="font-display text-base text-[--color-gold-300]">
+                {formatMxn(balance)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       <Button

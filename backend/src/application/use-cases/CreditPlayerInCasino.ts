@@ -104,7 +104,7 @@ export class CreditPlayerInCasinoUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.playerId,
+        userId: input.playerId,
         amount: boosted.amount,
         batchId: trimmedBatchId,
         actorId: input.actorId,

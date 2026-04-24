@@ -158,6 +158,31 @@ export function YahtzeeReglasContent() {
       </Section>
 
       <Section
+        label="Puntaje por letra"
+        title="Distribución de puntos"
+        description="No todas las letras valen igual — las raras valen más. Esta tabla es tu referencia al armar el escrito final."
+      >
+        <picture className="block overflow-hidden rounded-2xl ring-2 ring-inset ring-[--color-gold-500]/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+          <source
+            srcSet="/images/banners/yahtzee-puntos.avif"
+            type="image/avif"
+          />
+          <source
+            srcSet="/images/banners/yahtzee-puntos.webp"
+            type="image/webp"
+          />
+          <img
+            src="/images/banners/yahtzee-puntos.webp"
+            alt="Distribución de puntos de Yahtzee: A, E, O, I, S, N, R, U, L, T valen 1; D, G valen 2; C, B, M, P valen 3; F, H, V valen 4; Q vale 5; J, Ñ, X valen 8; Z vale 10; el comodín vale 0."
+            loading="lazy"
+            decoding="async"
+            className="block h-auto w-full select-none"
+            draggable={false}
+          />
+        </picture>
+      </Section>
+
+      <Section
         label="Cómo se juega"
         title="Paso a paso de la ronda"
         description="Cada ronda es una unidad mínima — el dealer la abre, se resuelve y se reparte la letra."

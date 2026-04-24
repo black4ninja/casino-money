@@ -123,7 +123,7 @@ export class AuctionController {
       }
       const auction = await this.raisePaddle.execute({
         casinoId,
-        playerId: userId,
+        userId,
         amount,
       });
       res.json({ auction: auction.toPublic() });

@@ -380,24 +380,29 @@ export default function PlayerSubasta() {
         </Card>
       )}
 
-      {/* Transferir durante la subasta — para fondear compañeros */}
-      <Card tone="night" className="flex flex-col gap-3">
-        <h3 className="font-display text-xl text-[--color-ivory]">
-          Financiar a otro jugador
-        </h3>
-        <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
-          Si no puedes pujar más, manda tus fichas a alguien de tu equipo
-          que sí pueda seguir.
-        </p>
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => setTransferOpen(true)}
-          disabled={!availableBalance || availableBalance <= 0}
-        >
-          Transferir a otro jugador →
-        </Button>
-      </Card>
+      {/* Transferir durante la subasta — para fondear compañeros.
+          Solo visible para players: los dealers no transfieren fichas
+          (su saldo es comisión personal y el endpoint de transferencia
+          exige que ambas partes sean role=player). */}
+      {user?.role === "player" && (
+        <Card tone="night" className="flex flex-col gap-3">
+          <h3 className="font-display text-xl text-[--color-ivory]">
+            Financiar a otro jugador
+          </h3>
+          <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
+            Si no puedes pujar más, manda tus fichas a alguien de tu equipo
+            que sí pueda seguir.
+          </p>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setTransferOpen(true)}
+            disabled={!availableBalance || availableBalance <= 0}
+          >
+            Transferir a otro jugador →
+          </Button>
+        </Card>
+      )}
 
       {bidError && (
         <Card tone="night">

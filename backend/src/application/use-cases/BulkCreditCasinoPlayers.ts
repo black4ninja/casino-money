@@ -105,7 +105,7 @@ export class BulkCreditCasinoPlayersUseCase {
           { wallets: this.wallets, walletTxs: this.walletTxs },
           {
             casinoId: input.casinoId,
-            playerId: player.id,
+            userId: player.id,
             amount: boosted.amount,
             batchId: trimmedBatchId,
             actorId: input.actorId,

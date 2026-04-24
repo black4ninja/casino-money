@@ -211,7 +211,7 @@ export default function App() {
           <Route
             path="/player/casino/:casinoId/subasta"
             element={
-              <ProtectedRoute allowedRoles={["player", "master"]}>
+              <ProtectedRoute allowedRoles={["player", "dealer", "master"]}>
                 <PlayerSubasta />
               </ProtectedRoute>
             }

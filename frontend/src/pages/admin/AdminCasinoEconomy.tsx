@@ -112,7 +112,7 @@ export default function AdminCasinoEconomy() {
     (playerId: string, newBalance: number) => {
       setRows((prev) =>
         prev.map((r) =>
-          r.player.id === playerId ? { ...r, balance: newBalance } : r,
+          r.user.id === playerId ? { ...r, balance: newBalance } : r,
         ),
       );
     },
@@ -220,11 +220,11 @@ export default function AdminCasinoEconomy() {
         {dialog.kind === "deposit" && id && (
           <DepositToPlayerForm
             casinoId={id}
-            player={dialog.row.player}
+            player={dialog.row.user}
             currentBalance={dialog.row.balance}
             onClose={() => setDialog({ kind: "none" })}
             onDeposited={(newBalance) => {
-              patchRowBalance(dialog.row.player.id, newBalance);
+              patchRowBalance(dialog.row.user.id, newBalance);
             }}
           />
         )}
@@ -237,11 +237,11 @@ export default function AdminCasinoEconomy() {
         {dialog.kind === "debit" && id && (
           <DebitFromPlayerForm
             casinoId={id}
-            player={dialog.row.player}
+            player={dialog.row.user}
             currentBalance={dialog.row.balance}
             onClose={() => setDialog({ kind: "none" })}
             onDebited={(newBalance) => {
-              patchRowBalance(dialog.row.player.id, newBalance);
+              patchRowBalance(dialog.row.user.id, newBalance);
             }}
           />
         )}
@@ -254,7 +254,7 @@ export default function AdminCasinoEconomy() {
         {dialog.kind === "history" && id && dialogRow && (
           <PlayerTransactionsView
             casinoId={id}
-            player={dialogRow.player}
+            player={dialogRow.user}
             onClose={() => setDialog({ kind: "none" })}
           />
         )}

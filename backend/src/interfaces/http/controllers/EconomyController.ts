@@ -183,7 +183,7 @@ export class EconomyController {
       const rows = await this.listCasinoEconomyWallets.execute(casinoId);
       res.json({
         rows: rows.map((r) => ({
-          player: r.player.toPublic(),
+          user: r.user.toPublic(),
           walletId: r.walletId,
           balance: r.balance,
           walletActive: r.walletActive,

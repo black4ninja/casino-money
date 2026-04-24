@@ -274,6 +274,7 @@ export async function createApp(env: Env): Promise<Express> {
   );
   const listCasinoEconomyWallets = new ListCasinoEconomyWalletsUseCase(
     casinoRepo,
+    userRepo,
     walletRepo,
     listCasinoPlayers,
   );

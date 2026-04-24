@@ -4,7 +4,7 @@ import type { TransactionKind } from "../entities/TransactionKind.js";
 export type CreatePendingWalletTransactionInput = {
   walletId: string;
   casinoId: string;
-  playerId: string;
+  userId: string;
   kind: TransactionKind;
   delta: number;
   idempotencyKey: string;
@@ -36,10 +36,10 @@ export interface WalletTransactionRepo {
   markFailed(txId: string, reason: string): Promise<WalletTransaction>;
   listByBatch(batchId: string): Promise<WalletTransaction[]>;
   listByWallet(walletId: string, limit?: number): Promise<WalletTransaction[]>;
-  /** Historial de movimientos de un jugador en un casino específico. */
-  listByCasinoAndPlayer(
+  /** Historial de movimientos de un usuario en un casino específico. */
+  listByCasinoAndUser(
     casinoId: string,
-    playerId: string,
+    userId: string,
     limit?: number,
   ): Promise<WalletTransaction[]>;
 }

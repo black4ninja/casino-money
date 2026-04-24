@@ -69,7 +69,10 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
       const { rows } = await withAuth((t) =>
         apiListCasinoEconomyWallets(t, casinoId),
       );
-      setRows(rows);
+      // En el tab del dealer solo mostramos jugadores — los dealers aparecen
+      // también en la vista del admin pero acá son ruido (nadie paga ni cobra
+      // a un dealer, su saldo crece solo por comisiones automáticas).
+      setRows(rows.filter((r) => r.user.role === "player"));
     } catch (err) {
       const e = err as ApiError;
       setRowsError(e.message ?? "No se pudo cargar el roster");
@@ -90,7 +93,7 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
     (playerId: string, newBalance: number) => {
       setRows((prev) =>
         prev.map((r) =>
-          r.player.id === playerId ? { ...r, balance: newBalance } : r,
+          r.user.id === playerId ? { ...r, balance: newBalance } : r,
         ),
       );
     },
@@ -125,11 +128,11 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
         {dialog.kind === "deposit" && (
           <DepositToPlayerForm
             casinoId={casinoId}
-            player={dialog.row.player}
+            player={dialog.row.user}
             currentBalance={dialog.row.balance}
             onClose={() => setDialog({ kind: "none" })}
             onDeposited={(newBalance) => {
-              patchRowBalance(dialog.row.player.id, newBalance);
+              patchRowBalance(dialog.row.user.id, newBalance);
             }}
           />
         )}
@@ -142,11 +145,11 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
         {dialog.kind === "debit" && (
           <DebitFromPlayerForm
             casinoId={casinoId}
-            player={dialog.row.player}
+            player={dialog.row.user}
             currentBalance={dialog.row.balance}
             onClose={() => setDialog({ kind: "none" })}
             onDebited={(newBalance) => {
-              patchRowBalance(dialog.row.player.id, newBalance);
+              patchRowBalance(dialog.row.user.id, newBalance);
             }}
           />
         )}

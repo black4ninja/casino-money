@@ -132,7 +132,7 @@ export class TransferBetweenPlayersUseCase {
     // Validar saldo suficiente del emisor ANTES de mover dinero. El helper
     // `creditPlayerCore` aplica el delta sin clamp, así que es nuestra
     // responsabilidad evitar saldos negativos.
-    const fromWallet = await this.wallets.findByCasinoAndPlayer(
+    const fromWallet = await this.wallets.findByCasinoAndUser(
       input.casinoId,
       input.fromPlayerId,
     );
@@ -150,7 +150,7 @@ export class TransferBetweenPlayersUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.fromPlayerId,
+        userId: input.fromPlayerId,
         amount: -input.amount,
         batchId: trimmedBatchId,
         actorId: input.fromPlayerId,
@@ -172,7 +172,7 @@ export class TransferBetweenPlayersUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.toPlayerId,
+        userId: input.toPlayerId,
         amount: input.amount,
         batchId: trimmedBatchId,
         actorId: input.fromPlayerId,

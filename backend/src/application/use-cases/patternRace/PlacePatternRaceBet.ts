@@ -106,7 +106,7 @@ export class PlacePatternRaceBetUseCase {
     // Idempotencia: misma apuesta reintento → devolver estado.
     const existing = await this.bets.findByBetBatchId(betBatchId);
     if (existing) {
-      const wallet = await this.wallets.findByCasinoAndPlayer(
+      const wallet = await this.wallets.findByCasinoAndUser(
         input.casinoId,
         input.actorId,
       );
@@ -148,8 +148,8 @@ export class PlacePatternRaceBetUseCase {
 
     // Wallet + saldo.
     const wallet =
-      (await this.wallets.findByCasinoAndPlayer(input.casinoId, input.actorId)) ??
-      (await this.wallets.createForCasinoAndPlayer(input.casinoId, input.actorId));
+      (await this.wallets.findByCasinoAndUser(input.casinoId, input.actorId)) ??
+      (await this.wallets.createForCasinoAndUser(input.casinoId, input.actorId));
     if (!wallet.active) {
       throw AuthError.validation("wallet is frozen");
     }
@@ -162,7 +162,7 @@ export class PlacePatternRaceBetUseCase {
       { wallets: this.wallets, walletTxs: this.walletTxs },
       {
         casinoId: input.casinoId,
-        playerId: input.actorId,
+        userId: input.actorId,
         amount: -input.amount,
         batchId: betBatchId,
         actorId: input.actorId,
@@ -192,7 +192,7 @@ export class PlacePatternRaceBetUseCase {
       debit.status === "credited" || debit.status === "recovered"
         ? debit.balance
         : (
-            await this.wallets.findByCasinoAndPlayer(
+            await this.wallets.findByCasinoAndUser(
               input.casinoId,
               input.actorId,
             )

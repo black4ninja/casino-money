@@ -348,6 +348,27 @@ function MesaBody({
         </Card>
       );
     }
+    if (mesa.casino.subastaActive) {
+      return (
+        <Card tone="night" className="mb-6" style={{ marginInline: 0 }}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Badge tone="gold">subasta activa</Badge>
+              <p className="text-sm text-[--color-cream]/80">
+                Mientras dure la subasta, los cobros/pagos están suspendidos.
+                Puedes participar con tu saldo de comisiones.
+              </p>
+            </div>
+            <Link
+              to={`/player/casino/${mesa.casino.id}/subasta`}
+              className="shrink-0 rounded-full border border-[--color-gold-500]/40 bg-[--color-smoke]/70 px-4 py-2 font-label text-xs tracking-[0.25em] text-[--color-gold-300] hover:border-[--color-gold-400] hover:text-[--color-ivory]"
+            >
+              Ir a la subasta →
+            </Link>
+          </div>
+        </Card>
+      );
+    }
     return null;
   }, [mesa]);
 
