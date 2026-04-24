@@ -31,58 +31,65 @@ export const GAMES: readonly Game[] = [
   {
     id: "la_banca_sabe",
     name: "La Banca Sabe",
-    description: "Mesa conducida por un dealer; los jugadores retan a la banca.",
+    description:
+      "El dealer roba una carta, anuncia una categoría — verdad o mentira — y los jugadores apuestan en tres zonas.",
     emoji: "🏦",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/banca-sabe/reglas",
   },
   {
     id: "poker_holdem",
     name: "Poker Hold’em",
-    description: "Texas Hold’em tradicional con cartas físicas.",
+    description:
+      "Cada jugador recibe 2 cartas de patrón; se revelan 5 comunitarias en flop/turn/river y el grupo vota el mejor argumento.",
     emoji: "♠",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/poker-holdem/reglas",
   },
   {
     id: "blackjack",
     name: "Blackjack",
-    description: "21 clásico con mesa física.",
+    description:
+      "Plántate antes de que se acaben las 6 pistas. Menos pistas vistas = mayor multiplicador. El UML completo paga doble.",
     emoji: "♣",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/blackjack/reglas",
   },
   {
     id: "showdown",
     name: "Showdown",
-    description: "Duelo de cartas cara a cara.",
+    description:
+      "Una carta privada contra un escenario compartido. Dos rondas de apuesta, un descarte opcional y el grupo vota el mejor argumento.",
     emoji: "⚔",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/showdown/reglas",
   },
   {
     id: "cubilete",
     name: "Cubilete",
-    description: "Juego de dados con cubilete.",
+    description:
+      "Cada jugador esconde 5 dados. Apuestan cuántos dados de una categoría hay en la mesa. ¡Dudo!, ¡Exacto! y pregunta de rescate.",
     emoji: "🎲",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/cubilete/reglas",
   },
   {
     id: "tira_o_paga",
     name: "Tira o Paga",
-    description: "Dados rápidos: tiras para ganar o pagas.",
+    description:
+      "El lanzador anuncia un patrón, el dado decide dificultad y todos compiten al tiempo para resolver. Multiplicadores ×2/×3/×5.",
     emoji: "🎯",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/tira-o-paga/reglas",
   },
   {
     id: "yahtzee",
     name: "Yahtzee",
-    description: "Clásico de dados con combinaciones puntuables.",
+    description:
+      "La mesa donde menos aprendes pero más te diviertes. Mini retos con dados y del mundo real; al cierre escribes algo y el mejor escrito se lleva el pozo.",
     emoji: "🎰",
     digitalPath: null,
-    rulesPath: null,
+    rulesPath: "/juegos/yahtzee/reglas",
   },
 ];
 

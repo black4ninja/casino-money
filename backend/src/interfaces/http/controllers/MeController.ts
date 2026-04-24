@@ -2,16 +2,20 @@ import type { Request, Response, NextFunction } from "express";
 import type { ListMyMesasUseCase } from "../../../application/use-cases/ListMyMesas.js";
 import type { ListMyCasinosUseCase } from "../../../application/use-cases/ListMyCasinos.js";
 import type { ListMyCasinoMesasUseCase } from "../../../application/use-cases/ListMyCasinoMesas.js";
+import type { ListMyCasinoPlayersUseCase } from "../../../application/use-cases/ListMyCasinoPlayers.js";
 import type { GetMyCasinoMesaLastSpinUseCase } from "../../../application/use-cases/GetMyCasinoMesaLastSpin.js";
 import type { UpdateMyAliasUseCase } from "../../../application/use-cases/UpdateMyAlias.js";
+import type { TransferBetweenPlayersUseCase } from "../../../application/use-cases/TransferBetweenPlayers.js";
 
 export class MeController {
   constructor(
     private readonly listMyMesas: ListMyMesasUseCase,
     private readonly listMyCasinos: ListMyCasinosUseCase,
     private readonly listMyCasinoMesas: ListMyCasinoMesasUseCase,
+    private readonly listMyCasinoPlayers: ListMyCasinoPlayersUseCase,
     private readonly getMyCasinoMesaLastSpin: GetMyCasinoMesaLastSpinUseCase,
     private readonly updateMyAlias: UpdateMyAliasUseCase,
+    private readonly transferBetweenPlayers: TransferBetweenPlayersUseCase,
   ) {}
 
   myMesas = async (req: Request, res: Response, next: NextFunction) => {
@@ -92,6 +96,78 @@ export class MeController {
         mesaId,
       );
       res.json({ spin: spin ? spin.toPublic() : null });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  myCasinoPlayers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ status: "error", message: "not authenticated" });
+        return;
+      }
+      const casinoId = req.params.casinoId;
+      if (typeof casinoId !== "string" || !casinoId) {
+        res.status(400).json({ status: "error", message: "casinoId required" });
+        return;
+      }
+      const players = await this.listMyCasinoPlayers.execute({
+        actorId: userId,
+        casinoId,
+      });
+      res.json({ players: players.map((p) => p.toPublic()) });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  transferToPlayer = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        res.status(401).json({ status: "error", message: "not authenticated" });
+        return;
+      }
+      const casinoId = req.params.casinoId;
+      if (typeof casinoId !== "string" || !casinoId) {
+        res.status(400).json({ status: "error", message: "casinoId required" });
+        return;
+      }
+      const { toPlayerId, amount, batchId, note } = req.body ?? {};
+      if (typeof toPlayerId !== "string" || !toPlayerId) {
+        res
+          .status(400)
+          .json({ status: "error", message: "toPlayerId is required" });
+        return;
+      }
+      if (typeof amount !== "number") {
+        res
+          .status(400)
+          .json({ status: "error", message: "amount must be a number" });
+        return;
+      }
+      if (typeof batchId !== "string" || batchId.trim().length === 0) {
+        res
+          .status(400)
+          .json({ status: "error", message: "batchId is required" });
+        return;
+      }
+      const noteValue =
+        typeof note === "string" && note.trim().length > 0
+          ? note.trim().slice(0, 500)
+          : null;
+
+      const result = await this.transferBetweenPlayers.execute({
+        casinoId,
+        fromPlayerId: userId,
+        toPlayerId,
+        amount,
+        batchId,
+        note: noteValue,
+      });
+      res.json(result);
     } catch (err) {
       next(err);
     }

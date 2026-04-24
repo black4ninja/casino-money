@@ -108,6 +108,21 @@ export async function apiListUsers(
   return res.json();
 }
 
+/**
+ * Roster de quienes pueden ocupar el slot de tallador: dealers + masters.
+ * Los admins operan mesas en la práctica, así que deben ser visibles en
+ * los pickers de asignación.
+ */
+export async function apiListDealerCandidates(
+  accessToken: string,
+): Promise<{ users: AuthUser[] }> {
+  const res = await fetch(`${BASE}/users/dealer-candidates`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
 export async function apiCreateUser(
   accessToken: string,
   collection: UserCollection,

@@ -18,10 +18,10 @@ export type UpdateMesaInput = {
 };
 
 /**
- * Applies a partial update to a mesa. The tallador slot accepts only an
- * active dealer (role=dealer). Masters are not accepted here even though
- * the role hierarchy makes them capable of dealer actions — a mesa assignment
- * is a scheduling fact about a specific person with that job, not a permission.
+ * Applies a partial update to a mesa. The tallador slot accepts cualquier
+ * staff activo (role=dealer o master) — los administradores también operan
+ * mesas en la práctica, así que la asignación es un hecho de agenda sobre
+ * alguien con rol de staff, no una tier de permisos puro.
  *
  * If the parent casino has a non-empty `dealerIds` pool, the tallador must
  * belong to it. An empty pool means "no restriction yet" so legacy casinos
@@ -69,11 +69,11 @@ export class UpdateMesaUseCase {
             "Ese dealer está archivado",
           );
         }
-        if (user.role !== "dealer") {
+        if (user.role !== "dealer" && user.role !== "master") {
           throw new AuthError(
             "INSUFFICIENT_ROLE",
             400,
-            "El usuario asignado debe ser dealer",
+            "El usuario asignado debe ser dealer o master",
           );
         }
         const casino = await this.casinos.findById(mesa.casinoId);

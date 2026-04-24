@@ -11,6 +11,13 @@ import { Badge } from "@/components/atoms/Badge";
 import { Tabs, type TabItem } from "@/components/molecules/Tabs";
 import { RuletaReglasContent } from "@/components/organisms/games/RuletaReglasContent";
 import { RuletaScoreView } from "@/components/organisms/games/RuletaScoreView";
+import { BancaSabeReglasContent } from "@/components/organisms/games/BancaSabeReglasContent";
+import { PokerHoldemReglasContent } from "@/components/organisms/games/PokerHoldemReglasContent";
+import { BlackjackReglasContent } from "@/components/organisms/games/BlackjackReglasContent";
+import { ShowdownReglasContent } from "@/components/organisms/games/ShowdownReglasContent";
+import { CubileteReglasContent } from "@/components/organisms/games/CubileteReglasContent";
+import { TiraOPagaReglasContent } from "@/components/organisms/games/TiraOPagaReglasContent";
+import { YahtzeeReglasContent } from "@/components/organisms/games/YahtzeeReglasContent";
 import { useAuthStore } from "@/stores/authStore";
 import type { ApiError } from "@/lib/authApi";
 import { apiListMyCasinoMesas, type Mesa } from "@/lib/mesaApi";
@@ -276,6 +283,69 @@ function MesaBody({
     }
     return null;
   }, [mesa, casinoActive]);
+
+  if (mesa.gameType === "la_banca_sabe") {
+    return (
+      <>
+        {archivedBanner}
+        <BancaSabeReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "poker_holdem") {
+    return (
+      <>
+        {archivedBanner}
+        <PokerHoldemReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "blackjack") {
+    return (
+      <>
+        {archivedBanner}
+        <BlackjackReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "showdown") {
+    return (
+      <>
+        {archivedBanner}
+        <ShowdownReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "cubilete") {
+    return (
+      <>
+        {archivedBanner}
+        <CubileteReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "tira_o_paga") {
+    return (
+      <>
+        {archivedBanner}
+        <TiraOPagaReglasContent />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "yahtzee") {
+    return (
+      <>
+        {archivedBanner}
+        <YahtzeeReglasContent />
+      </>
+    );
+  }
 
   if (mesa.gameType !== "ruleta") {
     return (

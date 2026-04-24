@@ -133,9 +133,16 @@ export function AssignTalladorForm({
                       {d.matricula}
                     </span>
                   </div>
-                  {isCurrent && (
-                    <Badge tone={isSelected ? "gold" : "neutral"}>actual</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {d.role === "master" && (
+                      <Badge tone="gold">master</Badge>
+                    )}
+                    {isCurrent && (
+                      <Badge tone={isSelected ? "gold" : "neutral"}>
+                        actual
+                      </Badge>
+                    )}
+                  </div>
                 </button>
               );
             })

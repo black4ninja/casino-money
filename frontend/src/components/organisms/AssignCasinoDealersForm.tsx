@@ -76,7 +76,8 @@ export function AssignCasinoDealersForm({
         Dealers del casino
       </h3>
       <p className="font-label text-xs tracking-widest text-[--color-cream]/60 mb-4">
-        Selecciona qué dealers podrán asignarse a las mesas de este casino.
+        Selecciona quiénes podrán asignarse a las mesas de este casino.
+        Incluye dealers y masters (los masters también operan mesas).
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -96,7 +97,7 @@ export function AssignCasinoDealersForm({
         >
           {activeDealers.length === 0 ? (
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">
-              No hay dealers activos en el sistema.
+              No hay dealers ni masters activos en el sistema.
             </p>
           ) : filtered.length === 0 ? (
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">
@@ -129,12 +130,17 @@ export function AssignCasinoDealersForm({
                       {d.matricula}
                     </span>
                   </div>
-                  {wasSelected && !isSelected && (
-                    <Badge tone="neutral">se quitará</Badge>
-                  )}
-                  {!wasSelected && isSelected && (
-                    <Badge tone="success">nuevo</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {d.role === "master" && (
+                      <Badge tone="gold">master</Badge>
+                    )}
+                    {wasSelected && !isSelected && (
+                      <Badge tone="neutral">se quitará</Badge>
+                    )}
+                    {!wasSelected && isSelected && (
+                      <Badge tone="success">nuevo</Badge>
+                    )}
+                  </div>
                 </button>
               );
             })

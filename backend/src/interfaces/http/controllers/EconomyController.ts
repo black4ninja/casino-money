@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { BulkCreditCasinoPlayersUseCase } from "../../../application/use-cases/BulkCreditCasinoPlayers.js";
 import type { CreditPlayerInCasinoUseCase } from "../../../application/use-cases/CreditPlayerInCasino.js";
+import type { DebitPlayerInCasinoUseCase } from "../../../application/use-cases/DebitPlayerInCasino.js";
 import type { ListCasinoEconomyWalletsUseCase } from "../../../application/use-cases/ListCasinoEconomyWallets.js";
 import type { ListPlayerCasinoTransactionsUseCase } from "../../../application/use-cases/ListPlayerCasinoTransactions.js";
 
@@ -20,6 +21,7 @@ export class EconomyController {
   constructor(
     private readonly bulkCreditCasinoPlayers: BulkCreditCasinoPlayersUseCase,
     private readonly creditPlayerInCasino: CreditPlayerInCasinoUseCase,
+    private readonly debitPlayerInCasino: DebitPlayerInCasinoUseCase,
     private readonly listCasinoEconomyWallets: ListCasinoEconomyWalletsUseCase,
     private readonly listPlayerCasinoTransactions: ListPlayerCasinoTransactionsUseCase,
   ) {}
@@ -106,6 +108,56 @@ export class EconomyController {
       }
 
       const result = await this.creditPlayerInCasino.execute({
+        casinoId,
+        playerId,
+        amount,
+        batchId,
+        actorId,
+        note: noteValue,
+      });
+
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  debitPlayer = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const casinoId = resolveCasinoId(req);
+      const playerId = resolvePlayerId(req);
+      if (!casinoId || !playerId) {
+        res
+          .status(400)
+          .json({ status: "error", message: "casino id and player id required" });
+        return;
+      }
+
+      const { amount, batchId, note } = req.body ?? {};
+      if (typeof amount !== "number") {
+        res
+          .status(400)
+          .json({ status: "error", message: "amount must be a number" });
+        return;
+      }
+      if (typeof batchId !== "string" || batchId.trim().length === 0) {
+        res
+          .status(400)
+          .json({ status: "error", message: "batchId is required" });
+        return;
+      }
+      const noteValue =
+        typeof note === "string" && note.trim().length > 0
+          ? note.trim().slice(0, 500)
+          : null;
+
+      const actorId = req.user?.sub;
+      if (!actorId) {
+        res.status(401).json({ status: "error", message: "unauthorized" });
+        return;
+      }
+
+      const result = await this.debitPlayerInCasino.execute({
         casinoId,
         playerId,
         amount,

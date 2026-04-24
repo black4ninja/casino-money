@@ -100,6 +100,89 @@ export async function apiCreditPlayer(
   return res.json();
 }
 
+export type DebitPlayerResult = {
+  batchId: string;
+  amount: number;
+  playerId: string;
+  outcome: CreditPlayerOutcome;
+};
+
+/**
+ * Cobro (débito) a un jugador específico del casino. Mismo contrato
+ * idempotente que el depósito — reintentar con el mismo batchId es seguro.
+ * El backend valida saldo suficiente antes de aplicar.
+ */
+export async function apiDebitPlayer(
+  accessToken: string,
+  casinoId: string,
+  playerId: string,
+  data: { amount: number; batchId: string; note?: string },
+): Promise<DebitPlayerResult> {
+  const res = await fetch(
+    `${BASE}/me/casinos/${casinoId}/economy/players/${playerId}/debit`,
+    {
+      method: "POST",
+      headers: authedHeaders(accessToken, true),
+      body: JSON.stringify(data),
+    },
+  );
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export type TransferToPlayerResult = {
+  batchId: string;
+  amount: number;
+  fromPlayerId: string;
+  toPlayerId: string;
+  fromOutcome: CreditPlayerOutcome;
+  toOutcome: CreditPlayerOutcome;
+};
+
+/**
+ * Transferencia jugador→jugador dentro de un casino. El emisor es el
+ * propio caller (sale del token). Idempotente por `batchId`. Si la pierna
+ * receptora falla tras aplicar el débito, la UI muestra el detalle y pide
+ * reconciliar al maestro (ledger queda con kind=player_transfer_in, status=failed).
+ */
+export async function apiTransferToPlayer(
+  accessToken: string,
+  casinoId: string,
+  data: {
+    toPlayerId: string;
+    amount: number;
+    batchId: string;
+    note?: string;
+  },
+): Promise<TransferToPlayerResult> {
+  const res = await fetch(
+    `${BASE}/me/casinos/${casinoId}/transfer-to-player`,
+    {
+      method: "POST",
+      headers: authedHeaders(accessToken, true),
+      body: JSON.stringify(data),
+    },
+  );
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+/**
+ * Roster del casino visible para el propio jugador autenticado (se excluye
+ * a sí mismo). Sirve como fuente del selector "transferir a otro jugador".
+ * No expone balances — sólo nombre/matrícula/departamento.
+ */
+export async function apiListMyCasinoPlayers(
+  accessToken: string,
+  casinoId: string,
+): Promise<{ players: AuthUser[] }> {
+  const res = await fetch(`${BASE}/me/casinos/${casinoId}/players`, {
+    headers: authedHeaders(accessToken),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
 export type EconomyWalletRow = {
   player: AuthUser;
   walletId: string | null;
@@ -129,7 +212,16 @@ export type WalletTransaction = {
   walletId: string;
   casinoId: string;
   playerId: string;
-  kind: "global_credit" | "player_deposit";
+  kind:
+    | "global_credit"
+    | "player_deposit"
+    | "player_debit"
+    | "player_transfer_out"
+    | "player_transfer_in"
+    | "slot_bet"
+    | "slot_payout"
+    | "carrera_bet"
+    | "carrera_payout";
   delta: number;
   balanceAfter: number | null;
   idempotencyKey: string;

@@ -56,7 +56,7 @@ export default function DealerMenu() {
           <Button variant="gold" block>Emitir fichas</Button>
         </Link>
         <Link to="/dealer/redeem" className="block">
-          <Button variant="felt" block>Cobrar apuesta</Button>
+          <Button variant="danger" block>Cobrar apuesta</Button>
         </Link>
         <Link to="/dealer/dashboard" className="col-span-2 block">
           <Button variant="ghost" block>Tablero y exportar</Button>

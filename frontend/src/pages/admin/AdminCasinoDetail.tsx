@@ -12,8 +12,8 @@ import { AssignCasinoDepartamentosForm } from "@/components/organisms/AssignCasi
 import { AssignCasinoDealersForm } from "@/components/organisms/AssignCasinoDealersForm";
 import { useAuthStore } from "@/stores/authStore";
 import {
+  apiListDealerCandidates,
   apiListPlayerDepartamentos,
-  apiListUsers,
   type ApiError,
 } from "@/lib/authApi";
 import type { AuthUser } from "@/storage/auth";
@@ -70,8 +70,9 @@ export default function AdminCasinoDetail() {
   const [mesasLoading, setMesasLoading] = useState(true);
   const [mesasError, setMesasError] = useState<string | null>(null);
 
-  // Roster of dealers for the tallador-assignment picker. Fetched once per
-  // page load; refreshed on demand if the picker needs fresher data later.
+  // Roster de candidatos a tallador (dealers + masters). Los admins también
+  // operan mesas, así que aparecen aquí junto con los dealers. Fetched once
+  // per page load; el form filtra por active antes de permitir seleccionar.
   const [dealers, setDealers] = useState<AuthUser[]>([]);
   const [dealersLoaded, setDealersLoaded] = useState(false);
 
@@ -140,7 +141,7 @@ export default function AdminCasinoDetail() {
 
   const loadDealers = useCallback(async () => {
     try {
-      const { users } = await withAuth((t) => apiListUsers(t, "dealers"));
+      const { users } = await withAuth((t) => apiListDealerCandidates(t));
       setDealers(users);
     } catch {
       // Non-fatal: the picker will show an empty/retry state if it opens.
@@ -696,7 +697,21 @@ export default function AdminCasinoDetail() {
           <AssignTalladorForm
             dealers={dealers}
             currentTalladorId={dialog.mesa.talladorId}
-            allowedDealerIds={casino?.dealerIds}
+            /* Los masters son siempre asignables como tallador: autoridad
+               global de staff, no dependen del pool explícito que el admin
+               cura para los dealers puros. Extendemos el allowlist con todos
+               los masters activos para que aparezcan en el picker aun si el
+               casino no los añadió explícitamente al pool. */
+            allowedDealerIds={
+              casino
+                ? [
+                    ...casino.dealerIds,
+                    ...dealers
+                      .filter((d) => d.role === "master" && d.active)
+                      .map((d) => d.id),
+                  ]
+                : undefined
+            }
             onSubmit={(talladorId) => handleAssignTallador(dialog.mesa, talladorId)}
             onCancel={closeDialog}
             loading={dialogLoading || !dealersLoaded}

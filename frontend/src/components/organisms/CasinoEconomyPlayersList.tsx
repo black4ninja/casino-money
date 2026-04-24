@@ -11,6 +11,13 @@ type Props = {
   loading: boolean;
   canDeposit: boolean;
   onDeposit: (row: EconomyWalletRow) => void;
+  /**
+   * Si se pasa, aparece el botón "Cobrar" al lado de Depositar. Comparte la
+   * misma guardia que canDeposit (un casino archivado no puede mover saldos
+   * en ninguna dirección). Si el jugador no tiene saldo el botón queda
+   * desactivado para evitar una llamada que el backend rechazaría.
+   */
+  onDebit?: (row: EconomyWalletRow) => void;
   onViewHistory?: (row: EconomyWalletRow) => void;
 };
 
@@ -35,6 +42,7 @@ export function CasinoEconomyPlayersList({
   loading,
   canDeposit,
   onDeposit,
+  onDebit,
   onViewHistory,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -149,6 +157,23 @@ export function CasinoEconomyPlayersList({
                   >
                     Depositar
                   </Button>
+                  {onDebit && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => onDebit(row)}
+                      disabled={!canDeposit || row.balance <= 0}
+                      title={
+                        !canDeposit
+                          ? "Reactiva el casino para cobrar"
+                          : row.balance <= 0
+                            ? "El jugador no tiene saldo"
+                            : undefined
+                      }
+                    >
+                      Cobrar
+                    </Button>
+                  )}
                   {onViewHistory && (
                     <Button
                       variant="info"

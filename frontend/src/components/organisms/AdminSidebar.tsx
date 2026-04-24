@@ -73,7 +73,7 @@ export function AdminSidebar({ active, collapsed, onToggle }: Props) {
         {!collapsed && (
           <div className="min-w-0">
             <h1 className="gold-shine font-display text-2xl leading-tight truncate">
-              Casino Activity
+              Pattern Casino
             </h1>
             <p className="mt-1 font-label text-xs tracking-[0.3em] text-[--color-cream]/60">
               Panel del maestro

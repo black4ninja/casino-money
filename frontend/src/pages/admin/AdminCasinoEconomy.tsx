@@ -15,6 +15,7 @@ import type { ApiError } from "@/lib/authApi";
 import { BulkCreditPanel } from "@/components/organisms/BulkCreditPanel";
 import { CasinoEconomyPlayersList } from "@/components/organisms/CasinoEconomyPlayersList";
 import { DepositToPlayerForm } from "@/components/organisms/DepositToPlayerForm";
+import { DebitFromPlayerForm } from "@/components/organisms/DebitFromPlayerForm";
 import { PlayerTransactionsView } from "@/components/organisms/PlayerTransactionsView";
 
 function formatDate(iso: string): string {
@@ -31,6 +32,7 @@ function formatDate(iso: string): string {
 type EconomyDialog =
   | { kind: "none" }
   | { kind: "deposit"; row: EconomyWalletRow }
+  | { kind: "debit"; row: EconomyWalletRow }
   | { kind: "history"; row: EconomyWalletRow };
 
 export default function AdminCasinoEconomy() {
@@ -204,6 +206,7 @@ export default function AdminCasinoEconomy() {
               loading={rowsLoading}
               canDeposit={canMutate}
               onDeposit={(row) => setDialog({ kind: "deposit", row })}
+              onDebit={(row) => setDialog({ kind: "debit", row })}
               onViewHistory={(row) => setDialog({ kind: "history", row })}
             />
           </>
@@ -221,6 +224,23 @@ export default function AdminCasinoEconomy() {
             currentBalance={dialog.row.balance}
             onClose={() => setDialog({ kind: "none" })}
             onDeposited={(newBalance) => {
+              patchRowBalance(dialog.row.player.id, newBalance);
+            }}
+          />
+        )}
+      </FormModal>
+
+      <FormModal
+        open={dialog.kind === "debit"}
+        onClose={() => setDialog({ kind: "none" })}
+      >
+        {dialog.kind === "debit" && id && (
+          <DebitFromPlayerForm
+            casinoId={id}
+            player={dialog.row.player}
+            currentBalance={dialog.row.balance}
+            onClose={() => setDialog({ kind: "none" })}
+            onDebited={(newBalance) => {
               patchRowBalance(dialog.row.player.id, newBalance);
             }}
           />

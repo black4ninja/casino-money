@@ -14,6 +14,13 @@ const Simulator = lazy(() => import("./pages/Simulator"));
 const Juegos = lazy(() => import("./pages/juegos/Juegos"));
 const Ruleta = lazy(() => import("./pages/juegos/Ruleta"));
 const RuletaReglas = lazy(() => import("./pages/juegos/RuletaReglas"));
+const BancaSabeReglas = lazy(() => import("./pages/juegos/BancaSabeReglas"));
+const PokerHoldemReglas = lazy(() => import("./pages/juegos/PokerHoldemReglas"));
+const BlackjackReglas = lazy(() => import("./pages/juegos/BlackjackReglas"));
+const ShowdownReglas = lazy(() => import("./pages/juegos/ShowdownReglas"));
+const CubileteReglas = lazy(() => import("./pages/juegos/CubileteReglas"));
+const TiraOPagaReglas = lazy(() => import("./pages/juegos/TiraOPagaReglas"));
+const YahtzeeReglas = lazy(() => import("./pages/juegos/YahtzeeReglas"));
 const DisplayCarrera = lazy(() => import("./pages/display/DisplayCarrera"));
 
 const AdminSession = lazy(() => import("./pages/admin/AdminSession"));
@@ -82,6 +89,13 @@ export default function App() {
         <Route path="/juegos" element={<Juegos />} />
         <Route path="/juegos/ruleta" element={<Ruleta />} />
         <Route path="/juegos/ruleta/reglas" element={<RuletaReglas />} />
+        <Route path="/juegos/banca-sabe/reglas" element={<BancaSabeReglas />} />
+        <Route path="/juegos/poker-holdem/reglas" element={<PokerHoldemReglas />} />
+        <Route path="/juegos/blackjack/reglas" element={<BlackjackReglas />} />
+        <Route path="/juegos/showdown/reglas" element={<ShowdownReglas />} />
+        <Route path="/juegos/cubilete/reglas" element={<CubileteReglas />} />
+        <Route path="/juegos/tira-o-paga/reglas" element={<TiraOPagaReglas />} />
+        <Route path="/juegos/yahtzee/reglas" element={<YahtzeeReglas />} />
         {/* Proyección pública de la Carrera de Patrones — sin auth. */}
         <Route path="/display/casino/:casinoId/carrera" element={<DisplayCarrera />} />
 

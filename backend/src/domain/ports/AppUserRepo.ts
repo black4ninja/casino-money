@@ -33,6 +33,12 @@ export interface AppUserRepo {
   /** Masters listing — includes archived (active=false), excludes deleted. */
   listByRole(role: Role): Promise<AppUser[]>;
   /**
+   * Union sobre varios roles. Incluye archivados (active=false), excluye
+   * borrados. Usado para "candidatos a tallador" (dealer ∪ master) y otras
+   * consultas donde la jerarquía de roles aplica.
+   */
+  listByRoles(roles: readonly Role[]): Promise<AppUser[]>;
+  /**
    * Active players whose `departamento` is in the given list. Archived or
    * deleted rows are excluded — used to materialize the roster of a casino
    * from its `departamentos` array.

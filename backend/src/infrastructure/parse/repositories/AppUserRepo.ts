@@ -103,6 +103,16 @@ export class ParseAppUserRepo implements AppUserRepo {
     return results.map(toEntity);
   }
 
+  async listByRoles(roles: readonly Role[]): Promise<AppUser[]> {
+    if (roles.length === 0) return [];
+    const results = await this.qAlive()
+      .containedIn("role", roles as Role[])
+      .ascending("createdAt")
+      .limit(1000)
+      .find({ useMasterKey: true });
+    return results.map(toEntity);
+  }
+
   async listActivePlayersByDepartamentos(
     departamentos: string[],
   ): Promise<AppUser[]> {

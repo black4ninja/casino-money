@@ -12,6 +12,13 @@ import { Tabs, type TabItem } from "@/components/molecules/Tabs";
 import { RuletaGameView } from "@/components/organisms/games/RuletaGameView";
 import { RuletaReglasContent } from "@/components/organisms/games/RuletaReglasContent";
 import { RuletaScoreView } from "@/components/organisms/games/RuletaScoreView";
+import { BancaSabeReglasContent } from "@/components/organisms/games/BancaSabeReglasContent";
+import { PokerHoldemReglasContent } from "@/components/organisms/games/PokerHoldemReglasContent";
+import { BlackjackReglasContent } from "@/components/organisms/games/BlackjackReglasContent";
+import { ShowdownReglasContent } from "@/components/organisms/games/ShowdownReglasContent";
+import { CubileteReglasContent } from "@/components/organisms/games/CubileteReglasContent";
+import { TiraOPagaReglasContent } from "@/components/organisms/games/TiraOPagaReglasContent";
+import { YahtzeeReglasContent } from "@/components/organisms/games/YahtzeeReglasContent";
 import { DealerPayView } from "@/components/organisms/games/DealerPayView";
 import { useAuthStore } from "@/stores/authStore";
 import type { ApiError } from "@/lib/authApi";
@@ -167,12 +174,31 @@ export default function DealerMesaView() {
   const game = mesa ? findGame(mesa.gameType) : null;
   const gameLabel = game?.name ?? mesa?.gameType ?? "";
 
+  const isRuleta = mesa?.gameType === "ruleta";
+  // Juegos que tienen reglas pero no jugabilidad digital — sólo muestran
+  // el tab "Reglas" (más el "Pagar" universal).
+  const isReglasOnly =
+    mesa?.gameType === "la_banca_sabe" ||
+    mesa?.gameType === "poker_holdem" ||
+    mesa?.gameType === "blackjack" ||
+    mesa?.gameType === "showdown" ||
+    mesa?.gameType === "cubilete" ||
+    mesa?.gameType === "tira_o_paga" ||
+    mesa?.gameType === "yahtzee";
+  // Tab por defecto por juego: ruleta abre en "juego"; los reglas-only
+  // abren en "reglas"; el resto en "pagar".
+  const defaultTab: MesaTab = isRuleta
+    ? "juego"
+    : isReglasOnly
+      ? "reglas"
+      : "pagar";
+
   const urlTab = searchParams.get("tab");
   const activeTab: MesaTab =
-    urlTab && isMesaTab(urlTab) ? urlTab : "juego";
+    urlTab && isMesaTab(urlTab) ? urlTab : defaultTab;
 
   function setActiveTab(next: MesaTab) {
-    if (next === "juego") {
+    if (next === defaultTab) {
       searchParams.delete("tab");
     } else {
       searchParams.set("tab", next);
@@ -180,10 +206,8 @@ export default function DealerMesaView() {
     setSearchParams(searchParams, { replace: true });
   }
 
-  const isRuleta = mesa?.gameType === "ruleta";
-  // Los tabs de ruleta (juego/reglas/score) solo aplican al gameType ruleta.
   // "Pagar" es universal: cualquier mesa puede usarlo para depositar a
-  // jugadores del roster del casino.
+  // jugadores del roster del casino. Los demás tabs dependen del juego.
   const tabItems: TabItem<MesaTab>[] = [
     ...(isRuleta
       ? ([
@@ -191,7 +215,9 @@ export default function DealerMesaView() {
           { value: "reglas", label: "Reglas" },
           { value: "score", label: "Score" },
         ] as TabItem<MesaTab>[])
-      : []),
+      : isReglasOnly
+        ? ([{ value: "reglas", label: "Reglas" }] as TabItem<MesaTab>[])
+        : []),
     { value: "pagar", label: "Pagar" },
   ];
 
@@ -332,6 +358,69 @@ function MesaBody({
       <>
         {archivedBanner}
         <DealerPayView casinoId={mesa.casino.id} canDeposit={canDeposit} />
+      </>
+    );
+  }
+
+  if (mesa.gameType === "la_banca_sabe") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <BancaSabeReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "poker_holdem") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <PokerHoldemReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "blackjack") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <BlackjackReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "showdown") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <ShowdownReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "cubilete") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <CubileteReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "tira_o_paga") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <TiraOPagaReglasContent />}
+      </>
+    );
+  }
+
+  if (mesa.gameType === "yahtzee") {
+    return (
+      <>
+        {archivedBanner}
+        {tab === "reglas" && <YahtzeeReglasContent />}
       </>
     );
   }

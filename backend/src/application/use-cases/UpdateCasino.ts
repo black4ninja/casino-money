@@ -95,11 +95,11 @@ export class UpdateCasinoUseCase {
             `El dealer ${user.matricula} está archivado`,
           );
         }
-        if (user.role !== "dealer") {
+        if (user.role !== "dealer" && user.role !== "master") {
           throw new AuthError(
             "INSUFFICIENT_ROLE",
             400,
-            `${user.matricula} no es dealer`,
+            `${user.matricula} no puede asignarse como dealer`,
           );
         }
       }

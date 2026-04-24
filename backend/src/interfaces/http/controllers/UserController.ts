@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { CreateUserUseCase } from "../../../application/use-cases/CreateUser.js";
 import type { ListUsersUseCase } from "../../../application/use-cases/ListUsers.js";
+import type { ListDealerCandidatesUseCase } from "../../../application/use-cases/ListDealerCandidates.js";
 import type { UpdateUserUseCase } from "../../../application/use-cases/UpdateUser.js";
 import type { SetUserActiveUseCase } from "../../../application/use-cases/SetUserActive.js";
 import type { DeleteUserUseCase } from "../../../application/use-cases/DeleteUser.js";
@@ -37,7 +38,26 @@ export class UserController {
     private readonly deleteUser: DeleteUserUseCase,
     private readonly bulkCreatePlayers: BulkCreatePlayersUseCase,
     private readonly listPlayerDepartamentos: ListPlayerDepartamentosUseCase,
+    private readonly listDealerCandidates: ListDealerCandidatesUseCase,
   ) {}
+
+  /**
+   * GET /users/dealer-candidates — roster de usuarios que pueden ocupar el
+   * slot de tallador (dealers + masters). Los masters también operan mesas,
+   * así que el admin los necesita visibles al curar dealers en un casino.
+   */
+  listDealerCandidatesHandler = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const users = await this.listDealerCandidates.execute();
+      res.json({ users: users.map((u) => u.toPublic()) });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   /**
    * GET /users/players/departamentos — sorted, deduplicated list of

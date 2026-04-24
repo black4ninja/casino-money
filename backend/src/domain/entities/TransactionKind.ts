@@ -1,19 +1,26 @@
 /**
  * Tipos de movimiento en el ledger de wallet:
- *   global_credit  → crédito masivo a todos los jugadores del roster de un casino.
- *   player_deposit → depósito individual del master a un jugador.
- *   slot_bet       → débito de la apuesta al jalar la palanca de la tragamonedas.
- *   slot_payout    → crédito del premio al ganar en la tragamonedas.
- *   carrera_bet    → débito al apostar en la Carrera de Patrones.
- *   carrera_payout → crédito del premio cuando la apuesta de la carrera gana.
+ *   global_credit        → crédito masivo a todos los jugadores del roster.
+ *   player_deposit       → depósito individual del staff a un jugador.
+ *   player_debit         → cobro/extracción del staff al saldo del jugador.
+ *   player_transfer_out  → pierna emisora de una transferencia jugador→jugador.
+ *   player_transfer_in   → pierna receptora de una transferencia jugador→jugador.
+ *   slot_bet             → débito de la apuesta al jalar la palanca.
+ *   slot_payout          → crédito del premio al ganar en la tragamonedas.
+ *   carrera_bet          → débito al apostar en la Carrera de Patrones.
+ *   carrera_payout       → crédito del premio cuando la apuesta de la carrera gana.
  *
  * Reglas de signo:
- *   global_credit, player_deposit, slot_payout, carrera_payout → delta > 0.
- *   slot_bet, carrera_bet                                       → delta < 0.
+ *   global_credit, player_deposit, player_transfer_in, slot_payout,
+ *     carrera_payout                                             → delta > 0.
+ *   player_debit, player_transfer_out, slot_bet, carrera_bet     → delta < 0.
  */
 export type TransactionKind =
   | "global_credit"
   | "player_deposit"
+  | "player_debit"
+  | "player_transfer_out"
+  | "player_transfer_in"
   | "slot_bet"
   | "slot_payout"
   | "carrera_bet"
@@ -22,6 +29,9 @@ export type TransactionKind =
 export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "global_credit",
   "player_deposit",
+  "player_debit",
+  "player_transfer_out",
+  "player_transfer_in",
   "slot_bet",
   "slot_payout",
   "carrera_bet",
@@ -36,7 +46,12 @@ export function isTransactionKind(value: unknown): value is TransactionKind {
 }
 
 /** Kinds cuyo delta debe ser negativo (débitos de saldo). */
-export const DEBIT_KINDS: readonly TransactionKind[] = ["slot_bet", "carrera_bet"];
+export const DEBIT_KINDS: readonly TransactionKind[] = [
+  "slot_bet",
+  "carrera_bet",
+  "player_debit",
+  "player_transfer_out",
+];
 
 export function isDebitKind(kind: TransactionKind): boolean {
   return (DEBIT_KINDS as readonly string[]).includes(kind);

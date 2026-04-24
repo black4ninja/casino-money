@@ -122,7 +122,7 @@ export function RuletaReglasContent({ hideDigitalCTA }: Props = {}) {
                     accent="gold"
                   />
                 </div>
-                <p className="mt-3 rounded-lg bg-[--color-gold-500]/10 p-3 text-[11px] leading-relaxed text-[--color-cream]/75 ring-1 ring-inset ring-[--color-gold-500]/30 sm:text-xs">
+                <p className="mt-3 rounded-lg bg-[--color-gold-500]/10 p-3 text-xs leading-relaxed text-[--color-cream]/75 ring-1 ring-inset ring-[--color-gold-500]/30 sm:text-sm">
                   <strong className="text-[--color-gold-300]">Tip:</strong> los
                   pagos son desiguales a propósito. Apostar a{" "}
                   <em>Comportamiento</em> es más seguro (11 de 23 patrones) y
@@ -305,10 +305,10 @@ export function RuletaReglasContent({ hideDigitalCTA }: Props = {}) {
 function PullQuote() {
   return (
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[--color-smoke-800] to-[--color-felt-900] p-5 shadow-[0_8px_28px_rgba(0,0,0,0.4)] ring-2 ring-inset ring-[--color-gold-500]/40 sm:p-8">
-      <p className="font-label text-[10px] tracking-[0.3em] text-[--color-gold-300] sm:text-xs">
+      <p className="font-label text-xs tracking-[0.3em] text-[--color-gold-300] sm:text-sm">
         En una frase
       </p>
-      <p className="mt-2 font-display text-base leading-snug text-[--color-ivory] sm:mt-3 sm:text-xl md:text-2xl">
+      <p className="mt-2 font-display text-lg leading-snug text-[--color-ivory] sm:mt-3 sm:text-xl md:text-2xl">
         Los jugadores apuestan colocando fichas sobre un tablero de{" "}
         <span className="text-[--color-gold-300]">23 patrones</span> GoF. El
         dealer gira la rueda, ésta aterriza en un patrón, y se pagan las
@@ -337,7 +337,7 @@ function Section({
             aria-hidden
             className="h-px flex-1 bg-gradient-to-r from-transparent via-[--color-gold-500]/60 to-transparent"
           />
-          <span className="font-label text-[10px] tracking-[0.28em] text-[--color-gold-300] sm:text-xs sm:tracking-[0.3em]">
+          <span className="font-label text-xs tracking-[0.28em] text-[--color-gold-300] sm:text-sm sm:tracking-[0.3em]">
             {label}
           </span>
           <span
@@ -345,11 +345,11 @@ function Section({
             className="h-px flex-1 bg-gradient-to-r from-transparent via-[--color-gold-500]/60 to-transparent"
           />
         </div>
-        <h2 className="gold-shine text-center font-display text-xl sm:text-2xl md:text-3xl">
+        <h2 className="gold-shine text-center font-display text-2xl sm:text-2xl md:text-3xl">
           {title}
         </h2>
         {description && (
-          <p className="mx-auto max-w-xl text-center text-xs text-[--color-cream]/70 sm:text-sm md:text-base">
+          <p className="mx-auto max-w-xl text-center text-sm text-[--color-cream]/70 sm:text-sm md:text-base">
             {description}
           </p>
         )}
@@ -373,19 +373,19 @@ function StepCard({
   return (
     <li className="relative rounded-2xl bg-[--color-smoke-800]/80 p-5 shadow-[0_6px_20px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-[--color-gold-500]/20 sm:p-7 lg:p-8">
       <div className="flex items-start gap-3 sm:gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[--color-gold-300] to-[--color-gold-500] font-display text-base font-black text-[--color-smoke] shadow-[0_3px_0_#8a6a10,0_5px_10px_rgba(0,0,0,0.4)] sm:h-12 sm:w-12 sm:text-lg">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[--color-gold-300] to-[--color-gold-500] font-display text-lg font-black text-[--color-smoke] shadow-[0_3px_0_#8a6a10,0_5px_10px_rgba(0,0,0,0.4)] sm:h-12 sm:w-12 sm:text-lg">
           {n}
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center gap-2">
-            <span aria-hidden className="text-base sm:text-xl">
+            <span aria-hidden className="text-lg sm:text-xl">
               {icon}
             </span>
-            <h3 className="font-display text-base leading-tight text-[--color-ivory] sm:text-xl">
+            <h3 className="font-display text-lg leading-tight text-[--color-ivory] sm:text-xl">
               {title}
             </h3>
           </div>
-          <div className="mt-2 space-y-2 text-[13px] leading-relaxed text-[--color-cream]/85 sm:text-base">
+          <div className="mt-2 space-y-2 text-sm leading-relaxed text-[--color-cream]/85 sm:text-base">
             {body}
           </div>
         </div>
@@ -414,29 +414,23 @@ function BetTile({
   };
   return (
     <div
-      style={{
-        paddingLeft: "2rem",
-        paddingRight: "1.25rem",
-        paddingTop: "1.25rem",
-        paddingBottom: "1.25rem",
-      }}
       className={[
-        "rounded-lg border-l-4 bg-black/30",
+        "rounded-lg border-l-4 bg-black/30 py-4 pl-5 pr-4 sm:py-5 sm:pl-7 sm:pr-5",
         ACCENT_BORDER[accent],
       ].join(" ")}
     >
       <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-        <p className="font-display text-sm text-[--color-ivory] sm:text-base">
+        <p className="font-display text-base text-[--color-ivory] sm:text-base">
           {name}
         </p>
-        <p className="font-label text-[10px] tracking-widest text-[--color-gold-300] sm:text-xs">
+        <p className="font-label text-xs tracking-widest text-[--color-gold-300] sm:text-sm">
           {pays}
         </p>
       </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-[--color-cream]/70 sm:text-xs">
+      <p className="mt-2 text-sm leading-relaxed text-[--color-cream]/75 sm:text-sm">
         {where}
       </p>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-[--color-cream]/55 sm:text-xs">
+      <p className="mt-1.5 text-sm leading-relaxed text-[--color-cream]/60 sm:text-sm">
         {detail}
       </p>
     </div>
@@ -472,28 +466,22 @@ function PayoutChip({
   };
   return (
     <div
-      style={{
-        paddingLeft: "2rem",
-        paddingRight: "1.25rem",
-        paddingTop: "1rem",
-        paddingBottom: "1rem",
-      }}
       className={[
-        "flex items-center justify-between gap-3 rounded-xl border-l-4 bg-[--color-smoke-800]/70 shadow-[0_3px_10px_rgba(0,0,0,0.3)]",
+        "flex items-center justify-between gap-3 rounded-xl border-l-4 bg-[--color-smoke-800]/70 py-4 pl-5 pr-4 shadow-[0_3px_10px_rgba(0,0,0,0.3)] sm:py-4 sm:pl-7 sm:pr-5",
         TONE_BORDER[tone],
       ].join(" ")}
     >
       <div className="min-w-0">
-        <p className="truncate font-display text-sm text-[--color-ivory] sm:text-base">
+        <p className="truncate font-display text-base text-[--color-ivory] sm:text-base">
           {label}
         </p>
-        <p className="truncate font-label text-[10px] tracking-widest text-[--color-cream]/55">
+        <p className="truncate font-label text-xs tracking-widest text-[--color-cream]/60">
           {sub}
         </p>
       </div>
       <p
         className={[
-          "shrink-0 font-label text-[10px] tracking-widest sm:text-xs",
+          "shrink-0 font-label text-xs tracking-widest sm:text-sm",
           danger ? "text-[--color-chip-red-300]" : TONE_TEXT[tone],
         ].join(" ")}
       >

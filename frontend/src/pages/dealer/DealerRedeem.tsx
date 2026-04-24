@@ -152,7 +152,7 @@ export default function DealerRedeem() {
           </span>
           <p className="text-sm">{result.serials.length} ficha(s) cobradas</p>
           <ShareableQR value={result.receiptQR} label="Muestra el recibo al jugador" />
-          <Button variant="felt" onClick={() => setResult({ kind: "scanning" })}>
+          <Button variant="danger" onClick={() => setResult({ kind: "scanning" })}>
             Cobrar otra apuesta
           </Button>
         </Card>

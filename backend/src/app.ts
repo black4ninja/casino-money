@@ -35,6 +35,7 @@ import { LogoutUseCase } from "./application/use-cases/Logout.js";
 import { GetCurrentUserUseCase } from "./application/use-cases/GetCurrentUser.js";
 import { CreateUserUseCase } from "./application/use-cases/CreateUser.js";
 import { ListUsersUseCase } from "./application/use-cases/ListUsers.js";
+import { ListDealerCandidatesUseCase } from "./application/use-cases/ListDealerCandidates.js";
 import { UpdateUserUseCase } from "./application/use-cases/UpdateUser.js";
 import { SetUserActiveUseCase } from "./application/use-cases/SetUserActive.js";
 import { DeleteUserUseCase } from "./application/use-cases/DeleteUser.js";
@@ -61,8 +62,11 @@ import { RecordRouletteSpinUseCase } from "./application/use-cases/RecordRoulett
 import { GetLastRouletteSpinUseCase } from "./application/use-cases/GetLastRouletteSpin.js";
 import { BulkCreditCasinoPlayersUseCase } from "./application/use-cases/BulkCreditCasinoPlayers.js";
 import { CreditPlayerInCasinoUseCase } from "./application/use-cases/CreditPlayerInCasino.js";
+import { DebitPlayerInCasinoUseCase } from "./application/use-cases/DebitPlayerInCasino.js";
 import { ListCasinoEconomyWalletsUseCase } from "./application/use-cases/ListCasinoEconomyWallets.js";
 import { ListPlayerCasinoTransactionsUseCase } from "./application/use-cases/ListPlayerCasinoTransactions.js";
+import { ListMyCasinoPlayersUseCase } from "./application/use-cases/ListMyCasinoPlayers.js";
+import { TransferBetweenPlayersUseCase } from "./application/use-cases/TransferBetweenPlayers.js";
 import { PlaySlotMachineSpinUseCase } from "./application/use-cases/PlaySlotMachineSpin.js";
 import { ListSlotMachineHistoryUseCase } from "./application/use-cases/ListSlotMachineHistory.js";
 import { GetMyCasinoWalletUseCase } from "./application/use-cases/GetMyCasinoWallet.js";
@@ -137,6 +141,7 @@ export async function createApp(env: Env): Promise<Express> {
   const getMe = new GetCurrentUserUseCase(userRepo);
   const createUser = new CreateUserUseCase(userRepo);
   const listUsers = new ListUsersUseCase(userRepo);
+  const listDealerCandidates = new ListDealerCandidatesUseCase(userRepo);
   const updateUser = new UpdateUserUseCase(userRepo);
   const setUserActive = new SetUserActiveUseCase(userRepo, sessionRepo);
   const deleteUser = new DeleteUserUseCase(userRepo, sessionRepo);
@@ -177,6 +182,23 @@ export async function createApp(env: Env): Promise<Express> {
     listCasinoPlayers,
   );
   const creditPlayerInCasino = new CreditPlayerInCasinoUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+  );
+  const debitPlayerInCasino = new DebitPlayerInCasinoUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+  );
+  const listMyCasinoPlayers = new ListMyCasinoPlayersUseCase(
+    casinoRepo,
+    userRepo,
+    listCasinoPlayers,
+  );
+  const transferBetweenPlayers = new TransferBetweenPlayersUseCase(
     casinoRepo,
     userRepo,
     walletRepo,
@@ -235,6 +257,7 @@ export async function createApp(env: Env): Promise<Express> {
     deleteUser,
     bulkCreatePlayers,
     listPlayerDepartamentos,
+    listDealerCandidates,
   );
   const casinoController = new CasinoController(
     createCasino,
@@ -256,13 +279,16 @@ export async function createApp(env: Env): Promise<Express> {
     listMyMesas,
     listMyCasinos,
     listMyCasinoMesas,
+    listMyCasinoPlayers,
     getMyCasinoMesaLastSpin,
     updateMyAlias,
+    transferBetweenPlayers,
   );
   const spinController = new RouletteSpinController(recordSpin, getLastSpin);
   const economyController = new EconomyController(
     bulkCreditCasinoPlayers,
     creditPlayerInCasino,
+    debitPlayerInCasino,
     listCasinoEconomyWallets,
     listPlayerCasinoTransactions,
   );

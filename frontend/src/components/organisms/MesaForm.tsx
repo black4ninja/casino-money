@@ -51,30 +51,40 @@ export function MesaForm({
         Selecciona el tipo de juego
       </p>
       <form onSubmit={handle} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <ul
+          role="radiogroup"
+          aria-label="Tipo de juego"
+          className="flex max-h-[55vh] flex-col gap-1.5 overflow-y-auto rounded-xl bg-[--color-felt-900]/40 p-2 ring-1 ring-inset ring-white/5"
+        >
           {GAMES.map((g) => {
             const selected = gameType === g.id;
             return (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => setGameType(g.id)}
-                aria-pressed={selected}
-                className={[
-                  "flex flex-col items-start gap-1 rounded-xl px-3 py-3 text-left transition",
-                  "font-label text-sm tracking-wide",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-gold-400]",
-                  selected
-                    ? "bg-gradient-to-b from-[var(--color-chip-blue-400)] to-[var(--color-chip-blue-500)] text-white shadow-[inset_0_0_0_3px_var(--color-chip-blue-300),inset_0_0_0_4px_rgba(255,255,255,0.4),0_4px_0_var(--color-chip-blue-shadow),0_6px_14px_rgba(0,0,0,0.35)]"
-                    : "bg-[--color-smoke]/70 text-[--color-cream]/80 ring-1 ring-inset ring-white/5 hover:text-[--color-ivory] hover:bg-[--color-smoke]/90",
-                ].join(" ")}
-              >
-                <span className="text-xl leading-none">{g.emoji}</span>
-                <span className="truncate w-full">{g.name}</span>
-              </button>
+              <li key={g.id}>
+                <button
+                  type="button"
+                  onClick={() => setGameType(g.id)}
+                  role="radio"
+                  aria-checked={selected}
+                  className={[
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition",
+                    "font-label text-base tracking-wide",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-gold-400]",
+                    selected
+                      ? "bg-gradient-to-b from-[var(--color-chip-blue-400)] to-[var(--color-chip-blue-500)] text-white shadow-[inset_0_0_0_2px_var(--color-chip-blue-300),inset_0_0_0_3px_rgba(255,255,255,0.35)]"
+                      : "bg-[--color-smoke]/70 text-[--color-cream]/85 hover:bg-[--color-smoke]/90 hover:text-[--color-ivory]",
+                  ].join(" ")}
+                >
+                  <span aria-hidden className="text-2xl leading-none shrink-0">
+                    {g.emoji}
+                  </span>
+                  <span className="font-display text-lg truncate">
+                    {g.name}
+                  </span>
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
         {error && (
           <p

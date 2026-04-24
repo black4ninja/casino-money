@@ -33,7 +33,12 @@ export function Card({ tone = "felt", className, children, ...rest }: Props) {
   return (
     <div
       className={[
-        "rounded-3xl p-6 sm:p-7 mx-4",
+        // Padding generoso por default: mobile 28px, sm+ 36px. El p-6/p-7
+        // anterior se sentía "pegado al outline" en cuanto había contenido
+        // denso (rows con acciones, grids de chips, paneles baseline-split).
+        // Para modales con AmountPicker se usa override !p-7 sm:!p-9 (ya es
+        // igual al default, sirve como signal + cobertura si el default baja).
+        "rounded-3xl p-7 sm:p-9 mx-4",
         TONES[tone],
         className ?? "",
       ].join(" ")}

@@ -68,7 +68,7 @@ export function AdminLayout({
   }, [toggleDesktop]);
 
   return (
-    <div className="flex min-h-full flex-col md:flex-row">
+    <div className="landing-bg-fixed flex min-h-screen flex-col md:flex-row">
       {/* Mobile topbar */}
       <div className="flex items-center justify-between border-b border-[--color-gold-500]/20 bg-[--color-felt-900] px-4 py-3 md:hidden">
         <div>

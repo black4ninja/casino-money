@@ -11,6 +11,7 @@ import { apiListMyCasinos, type Casino } from "@/lib/casinoApi";
 import { apiListMyCasinoMesas, type Mesa } from "@/lib/mesaApi";
 import { apiGetMyCasinoSlotWallet } from "@/lib/slotsApi";
 import { findGame, gameLabel } from "@/domain/games";
+import { TransferToPlayerModal } from "@/components/organisms/TransferToPlayerModal";
 
 /**
  * /player/casino/:casinoId — the player has already authenticated and picked
@@ -32,6 +33,8 @@ export default function PlayerHome() {
 
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -177,7 +180,7 @@ export default function PlayerHome() {
             </h2>
           </Card>
 
-          <Card tone="night" className="flex flex-col items-center gap-1 py-6">
+          <Card tone="night" className="flex flex-col items-center gap-3 py-6">
             <p className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/60">
               TU SALDO EN ESTE CASINO
             </p>
@@ -188,6 +191,14 @@ export default function PlayerHome() {
             ) : (
               <Balance amount={balance ?? 0} size="lg" />
             )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setTransferOpen(true)}
+              disabled={!balance || balance <= 0}
+            >
+              Transferir a otro jugador →
+            </Button>
           </Card>
 
           <Card tone="night" className="flex flex-col gap-3">
@@ -304,6 +315,16 @@ export default function PlayerHome() {
             )}
           </Card>
         </>
+      )}
+
+      {casino && (
+        <TransferToPlayerModal
+          open={transferOpen}
+          casinoId={casino.id}
+          senderBalance={balance ?? 0}
+          onClose={() => setTransferOpen(false)}
+          onTransferred={(newBalance) => setBalance(newBalance)}
+        />
       )}
     </AppLayout>
   );

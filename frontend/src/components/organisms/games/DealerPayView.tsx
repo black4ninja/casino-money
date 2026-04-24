@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FormModal } from "@/components/molecules/FormModal";
 import { CasinoEconomyPlayersList } from "@/components/organisms/CasinoEconomyPlayersList";
 import { DepositToPlayerForm } from "@/components/organisms/DepositToPlayerForm";
+import { DebitFromPlayerForm } from "@/components/organisms/DebitFromPlayerForm";
 import { Card } from "@/components/atoms/Card";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -10,12 +11,18 @@ import {
 } from "@/lib/economyApi";
 import type { ApiError } from "@/lib/authApi";
 
+type PayDialog =
+  | { kind: "none" }
+  | { kind: "deposit"; row: EconomyWalletRow }
+  | { kind: "debit"; row: EconomyWalletRow };
+
 type Props = {
   /** Casino al que pertenece la mesa. Fuente de verdad para el roster y los wallets. */
   casinoId: string;
   /**
    * Flag de permisos locales: si el casino o la mesa están archivados, los
-   * depósitos deberían estar desactivados pero la lista igual es visible.
+   * movimientos (depositar o cobrar) deberían estar desactivados pero la
+   * lista igual es visible. Misma guardia para ambas direcciones.
    */
   canDeposit: boolean;
 };
@@ -24,6 +31,7 @@ type Props = {
  * Tab "Pagar" del dealer. Reutiliza los mismos componentes del panel admin:
  *   - `CasinoEconomyPlayersList` para mostrar el roster + saldo + buscador
  *   - `DepositToPlayerForm` para la mecánica del depósito
+ *   - `DebitFromPlayerForm` para la mecánica del cobro
  *
  * El endpoint `/casinos/:casinoId/economy/*` acepta al dealer (con mesa
  * activa en ese casino) desde que se cambió el gating a
@@ -37,7 +45,7 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
   const [rowsLoading, setRowsLoading] = useState(true);
   const [rowsError, setRowsError] = useState<string | null>(null);
 
-  const [activeRow, setActiveRow] = useState<EconomyWalletRow | null>(null);
+  const [dialog, setDialog] = useState<PayDialog>({ kind: "none" });
 
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -75,8 +83,9 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
     loadRows();
   }, [loadRows]);
 
-  // Actualiza una fila puntualmente tras un depósito, así la UI refleja el
-  // nuevo saldo sin esperar el re-fetch completo.
+  // Actualiza una fila puntualmente tras un movimiento, así la UI refleja
+  // el nuevo saldo sin esperar el re-fetch completo. Sirve para depósito
+  // y cobro — ambos terminan en un número nuevo.
   const patchRowBalance = useCallback(
     (playerId: string, newBalance: number) => {
       setRows((prev) =>
@@ -105,21 +114,39 @@ export function DealerPayView({ casinoId, canDeposit }: Props) {
         rows={rows}
         loading={rowsLoading}
         canDeposit={canDeposit}
-        onDeposit={(row) => setActiveRow(row)}
+        onDeposit={(row) => setDialog({ kind: "deposit", row })}
+        onDebit={(row) => setDialog({ kind: "debit", row })}
       />
 
       <FormModal
-        open={activeRow !== null}
-        onClose={() => setActiveRow(null)}
+        open={dialog.kind === "deposit"}
+        onClose={() => setDialog({ kind: "none" })}
       >
-        {activeRow && (
+        {dialog.kind === "deposit" && (
           <DepositToPlayerForm
             casinoId={casinoId}
-            player={activeRow.player}
-            currentBalance={activeRow.balance}
-            onClose={() => setActiveRow(null)}
+            player={dialog.row.player}
+            currentBalance={dialog.row.balance}
+            onClose={() => setDialog({ kind: "none" })}
             onDeposited={(newBalance) => {
-              patchRowBalance(activeRow.player.id, newBalance);
+              patchRowBalance(dialog.row.player.id, newBalance);
+            }}
+          />
+        )}
+      </FormModal>
+
+      <FormModal
+        open={dialog.kind === "debit"}
+        onClose={() => setDialog({ kind: "none" })}
+      >
+        {dialog.kind === "debit" && (
+          <DebitFromPlayerForm
+            casinoId={casinoId}
+            player={dialog.row.player}
+            currentBalance={dialog.row.balance}
+            onClose={() => setDialog({ kind: "none" })}
+            onDebited={(newBalance) => {
+              patchRowBalance(dialog.row.player.id, newBalance);
             }}
           />
         )}

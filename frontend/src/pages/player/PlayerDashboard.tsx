@@ -173,62 +173,72 @@ export default function PlayerDashboard() {
           </Button>
         </Card>
 
-        <div className="flex flex-col gap-3 px-4">
-          <h3 className="font-display text-xl text-[--color-ivory]">
-            Mis casinos
-          </h3>
-          <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
-            {loading
-              ? "Cargando…"
-              : `${casinos.length} evento(s) disponible(s)`}
-          </p>
-        </div>
+        {/* "Mis casinos" va dentro de un Card para que el heading respete
+            la misma rejilla horizontal que el resto (el Card atom trae mx-4;
+            un heading suelto con px-4 quedaba mal alineado en viewports
+            amplios donde el main tiene más padding horizontal). */}
+        <Card tone="night" className="flex flex-col gap-4">
+          <div>
+            <h3 className="font-display text-xl text-[--color-ivory]">
+              Mis casinos
+            </h3>
+            <p className="mt-1 font-label text-xs tracking-widest text-[--color-cream]/60">
+              {loading
+                ? "Cargando…"
+                : `${casinos.length} evento(s) disponible(s)`}
+            </p>
+          </div>
 
-        {error && (
-          <p
-            className="font-label text-xs tracking-wider text-[--color-carmine-400] px-4"
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
+          {error && (
+            <p
+              className="font-label text-xs tracking-wider text-[--color-carmine-400]"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
 
-        {!loading && !error && casinos.length === 0 && (
-          <Card tone="night">
+          {!loading && !error && casinos.length === 0 && (
             <p className="font-label text-sm text-[--color-cream]/70">
               {user?.departamento
                 ? `Aún no hay casinos disponibles para ${user.departamento}. Revisa más tarde.`
                 : "Tu cuenta no tiene un departamento asignado; pide a tu maestro que lo configure para ver casinos."}
             </p>
-          </Card>
-        )}
+          )}
 
-        {casinos.map((c) => (
-          <Card
-            key={c.id}
-            tone="night"
-            className="flex flex-col sm:flex-row sm:items-center gap-3"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="font-display text-lg text-[--color-ivory] truncate">
-                {c.name}
-              </div>
-              <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55 mt-0.5">
-                {formatDate(c.date)}
-              </div>
-            </div>
-            <Button
-              variant="onyx"
-              size="sm"
-              onClick={() => navigate(`/player/casino/${c.id}`)}
-              className="w-full sm:w-auto"
-            >
-              ¡Pasa al salón! →
-            </Button>
-          </Card>
-        ))}
+          {casinos.length > 0 && (
+            <ul className="flex flex-col gap-3">
+              {casinos.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-col gap-3 rounded-xl bg-[--color-smoke]/70 px-5 py-4 sm:flex-row sm:items-center"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-lg text-[--color-ivory] truncate">
+                      {c.name}
+                    </div>
+                    <div className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/55 mt-0.5">
+                      {formatDate(c.date)}
+                    </div>
+                  </div>
+                  <Button
+                    variant="onyx"
+                    size="sm"
+                    onClick={() => navigate(`/player/casino/${c.id}`)}
+                    className="w-full sm:w-auto"
+                  >
+                    ¡Pasa al salón! →
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
-        <div className="mt-8 px-4 pb-4">
+        {/* Logout sale del patrón de listado: va en su propio Card tone="night"
+            para respetar la misma rejilla (mx-4) que el resto y no quedar
+            flush con los bordes. */}
+        <Card tone="night" className="mt-4">
           <Button
             variant="danger"
             size="md"
@@ -237,7 +247,7 @@ export default function PlayerDashboard() {
           >
             Cerrar sesión
           </Button>
-        </div>
+        </Card>
       </div>
     </AppLayout>
   );
