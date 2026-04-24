@@ -78,7 +78,7 @@ export function AssignTalladorForm({
   return (
     <Card tone="night">
       <h3 className="font-display text-xl text-[--color-ivory] mb-1">
-        Asignar tallador
+        Asignar dealer
       </h3>
       <p className="font-label text-xs tracking-widest text-[--color-cream]/60 mb-4">
         Busca por nombre o matrícula
@@ -96,14 +96,14 @@ export function AssignTalladorForm({
         <div
           className="flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-xl bg-[--color-felt-900]/40 p-2 ring-1 ring-inset ring-white/5"
           role="listbox"
-          aria-label="Talladores disponibles"
+          aria-label="Dealers disponibles"
         >
           {filtered.length === 0 ? (
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">
               {dealers.length === 0
-                ? "No hay talladores registrados en el sistema."
+                ? "No hay dealers registrados en el sistema."
                 : restricted
-                  ? "Este casino aún no tiene talladores asignados. Ve a la sección de talladores del casino para agregarlos."
+                  ? "Este casino aún no tiene dealers asignados. Ve a la sección de dealers del casino para agregarlos."
                   : "Sin coincidencias."}
             </p>
           ) : (
@@ -166,7 +166,7 @@ export function AssignTalladorForm({
               onClick={handleClear}
               disabled={loading}
             >
-              Quitar tallador
+              Quitar dealer
             </Button>
           )}
           <Button

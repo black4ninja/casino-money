@@ -14,6 +14,7 @@ const Simulator = lazy(() => import("./pages/Simulator"));
 const Juegos = lazy(() => import("./pages/juegos/Juegos"));
 const Ruleta = lazy(() => import("./pages/juegos/Ruleta"));
 const RuletaReglas = lazy(() => import("./pages/juegos/RuletaReglas"));
+const DisplayCarrera = lazy(() => import("./pages/display/DisplayCarrera"));
 
 const AdminSession = lazy(() => import("./pages/admin/AdminSession"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -30,6 +31,7 @@ const PlayerDashboard = lazy(() => import("./pages/player/PlayerDashboard"));
 const PlayerHome = lazy(() => import("./pages/player/PlayerHome"));
 const PlayerMesaView = lazy(() => import("./pages/player/PlayerMesaView"));
 const PlayerSlots = lazy(() => import("./pages/player/PlayerSlots"));
+const PlayerCarrera = lazy(() => import("./pages/player/PlayerCarrera"));
 const PlayerWallet = lazy(() => import("./pages/player/PlayerWallet"));
 const PlayerIdentity = lazy(() => import("./pages/player/PlayerIdentity"));
 const PlayerReceive = lazy(() => import("./pages/player/PlayerReceive"));
@@ -80,6 +82,8 @@ export default function App() {
         <Route path="/juegos" element={<Juegos />} />
         <Route path="/juegos/ruleta" element={<Ruleta />} />
         <Route path="/juegos/ruleta/reglas" element={<RuletaReglas />} />
+        {/* Proyección pública de la Carrera de Patrones — sin auth. */}
+        <Route path="/display/casino/:casinoId/carrera" element={<DisplayCarrera />} />
 
         {/* Master admin panel (auth required) */}
         <Route
@@ -164,6 +168,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["player", "master"]}>
                 <PlayerSlots />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/casino/:casinoId/carrera"
+            element={
+              <ProtectedRoute allowedRoles={["player", "master"]}>
+                <PlayerCarrera />
               </ProtectedRoute>
             }
           />

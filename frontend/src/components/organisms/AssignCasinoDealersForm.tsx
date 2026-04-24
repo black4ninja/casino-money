@@ -73,10 +73,10 @@ export function AssignCasinoDealersForm({
   return (
     <Card tone="night">
       <h3 className="font-display text-xl text-[--color-ivory] mb-1">
-        Talladores del casino
+        Dealers del casino
       </h3>
       <p className="font-label text-xs tracking-widest text-[--color-cream]/60 mb-4">
-        Selecciona qué talladores podrán asignarse a las mesas de este casino.
+        Selecciona qué dealers podrán asignarse a las mesas de este casino.
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -92,11 +92,11 @@ export function AssignCasinoDealersForm({
           className="flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-xl bg-[--color-felt-900]/40 p-2 ring-1 ring-inset ring-white/5"
           role="listbox"
           aria-multiselectable="true"
-          aria-label="Talladores disponibles"
+          aria-label="Dealers disponibles"
         >
           {activeDealers.length === 0 ? (
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">
-              No hay talladores activos en el sistema.
+              No hay dealers activos en el sistema.
             </p>
           ) : filtered.length === 0 ? (
             <p className="px-3 py-6 text-center font-label text-xs tracking-wider text-[--color-cream]/50">

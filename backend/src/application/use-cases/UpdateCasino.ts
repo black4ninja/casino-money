@@ -85,21 +85,21 @@ export class UpdateCasinoUseCase {
           throw new AuthError(
             "INVALID_CREDENTIALS",
             404,
-            `Tallador ${dealerId} no encontrado`,
+            `Dealer ${dealerId} no encontrado`,
           );
         }
         if (!user.active) {
           throw new AuthError(
             "INACTIVE_ACCOUNT",
             400,
-            `El tallador ${user.matricula} está archivado`,
+            `El dealer ${user.matricula} está archivado`,
           );
         }
         if (user.role !== "dealer") {
           throw new AuthError(
             "INSUFFICIENT_ROLE",
             400,
-            `${user.matricula} no es tallador`,
+            `${user.matricula} no es dealer`,
           );
         }
       }

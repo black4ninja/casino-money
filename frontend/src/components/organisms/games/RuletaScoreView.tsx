@@ -58,7 +58,7 @@ export function RuletaScoreView({ spin, loading, error, viewerIsPlayer }: Props)
           </p>
           <p className="mt-2 font-label text-xs tracking-widest text-[--color-cream]/70">
             {viewerIsPlayer
-              ? "En cuanto el tallador gire la ruleta, el resultado aparecerá aquí."
+              ? "En cuanto el dealer gire la ruleta, el resultado aparecerá aquí."
               : "El primer giro que hagas desde la pestaña Juego aparecerá aquí automáticamente."}
           </p>
         </Card>

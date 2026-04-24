@@ -29,7 +29,7 @@ export default function Landing() {
         <RoleLink
           to="/dealer"
           emoji="♦"
-          title="Soy tallador"
+          title="Soy dealer"
           desc="Repartir fichas y cobrar apuestas en mi mesa"
         />
         <RoleLink

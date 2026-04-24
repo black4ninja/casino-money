@@ -140,7 +140,7 @@ export default function PlayerReceive() {
   return (
     <AppLayout
       title="Recibir fichas"
-      subtitle="Escanea el QR del tallador o de otro jugador"
+      subtitle="Escanea el QR del dealer o de otro jugador"
       back={{ to: "/player/wallet", label: "Cartera" }}
     >
       {status.kind === "scanning" && <ScannerPanel onDecoded={handle} />}

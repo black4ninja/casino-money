@@ -229,7 +229,7 @@ export default function AdminCasinoDetail() {
       await loadMesas();
     } catch (err) {
       const e = err as ApiError;
-      setDialogError(e.message ?? "No se pudo asignar el tallador");
+      setDialogError(e.message ?? "No se pudo asignar el dealer");
     } finally {
       setDialogLoading(false);
     }
@@ -298,7 +298,7 @@ export default function AdminCasinoDetail() {
       setDialog({ kind: "none" });
     } catch (err) {
       const e = err as ApiError;
-      setDialogError(e.message ?? "No se pudieron guardar los talladores");
+      setDialogError(e.message ?? "No se pudieron guardar los dealers");
     } finally {
       setDialogLoading(false);
     }
@@ -385,13 +385,29 @@ export default function AdminCasinoDetail() {
                     <Badge tone="danger">archivado</Badge>
                   )}
                 </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => navigate(`/admin/casinos/${id}/economy`)}
-                >
-                  Ver economía
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="info"
+                    size="sm"
+                    onClick={() =>
+                      window.open(
+                        `/display/casino/${id}/carrera`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
+                    title="Abre la proyección de la Carrera de Patrones en una nueva pestaña"
+                  >
+                    🏁 Proyectar carrera
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => navigate(`/admin/casinos/${id}/economy`)}
+                  >
+                    Ver economía
+                  </Button>
+                </div>
               </div>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div>
@@ -495,12 +511,12 @@ export default function AdminCasinoDetail() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-display text-xl text-[--color-ivory]">
-                    Talladores
+                    Dealers
                   </h3>
                   <p className="font-label text-xs tracking-widest text-[--color-cream]/60">
                     {casino.dealerIds.length === 0
-                      ? "Sin talladores asignados"
-                      : `${casino.dealerIds.length} tallador(es)`}
+                      ? "Sin dealers asignados"
+                      : `${casino.dealerIds.length} dealer(s)`}
                   </p>
                 </div>
                 <Button
@@ -517,12 +533,12 @@ export default function AdminCasinoDetail() {
                     setDialog({ kind: "assignDealers" });
                   }}
                 >
-                  Cambiar talladores
+                  Cambiar dealers
                 </Button>
               </div>
               {casino.dealerIds.length === 0 ? (
                 <p className="font-label text-sm text-[--color-cream]/70">
-                  Sin talladores asignados al casino. Agrega algunos para poder
+                  Sin dealers asignados al casino. Agrega algunos para poder
                   asignarlos a las mesas.
                 </p>
               ) : (
@@ -828,7 +844,7 @@ function MesaRow({
     talladorBlock = (
       <div className="flex items-baseline gap-2">
         <span className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/50">
-          Tallador
+          Dealer
         </span>
         <span className="font-display text-sm text-[--color-cream]">
           {tallador.fullName ?? "(sin nombre)"}
@@ -842,7 +858,7 @@ function MesaRow({
     talladorBlock = (
       <div className="flex items-baseline gap-2">
         <span className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/50">
-          Tallador
+          Dealer
         </span>
         <span className="font-mono text-xs text-[--color-cream]/60">
           (no está en la lista actual)
@@ -853,7 +869,7 @@ function MesaRow({
     talladorBlock = (
       <div className="flex items-center gap-2">
         <span className="font-label text-[0.65rem] tracking-[0.3em] text-[--color-cream]/40">
-          Sin tallador asignado
+          Sin dealer asignado
         </span>
       </div>
     );
@@ -881,7 +897,7 @@ function MesaRow({
           Editar
         </Button>
         <Button variant="gold" size="sm" onClick={onAssignTallador}>
-          {mesa.talladorId ? "Cambiar tallador" : "Asignar tallador"}
+          {mesa.talladorId ? "Cambiar dealer" : "Asignar dealer"}
         </Button>
         {mesa.active ? (
           <Button variant="purple" size="sm" onClick={onArchive}>

@@ -12,6 +12,7 @@ import { Tabs, type TabItem } from "@/components/molecules/Tabs";
 import { RuletaGameView } from "@/components/organisms/games/RuletaGameView";
 import { RuletaReglasContent } from "@/components/organisms/games/RuletaReglasContent";
 import { RuletaScoreView } from "@/components/organisms/games/RuletaScoreView";
+import { DealerPayView } from "@/components/organisms/games/DealerPayView";
 import { useAuthStore } from "@/stores/authStore";
 import type { ApiError } from "@/lib/authApi";
 import { apiListMyMesas, type MyMesa } from "@/lib/mesaApi";
@@ -38,11 +39,16 @@ function formatDate(iso: string): string {
   });
 }
 
-type RuletaTab = "juego" | "reglas" | "score";
-const RULETA_TABS: readonly RuletaTab[] = ["juego", "reglas", "score"] as const;
+type MesaTab = "juego" | "reglas" | "score" | "pagar";
+const MESA_TABS: readonly MesaTab[] = [
+  "juego",
+  "reglas",
+  "score",
+  "pagar",
+] as const;
 
-function isRuletaTab(v: string): v is RuletaTab {
-  return (RULETA_TABS as readonly string[]).includes(v);
+function isMesaTab(v: string): v is MesaTab {
+  return (MESA_TABS as readonly string[]).includes(v);
 }
 
 /**
@@ -162,10 +168,10 @@ export default function DealerMesaView() {
   const gameLabel = game?.name ?? mesa?.gameType ?? "";
 
   const urlTab = searchParams.get("tab");
-  const activeTab: RuletaTab =
-    urlTab && isRuletaTab(urlTab) ? urlTab : "juego";
+  const activeTab: MesaTab =
+    urlTab && isMesaTab(urlTab) ? urlTab : "juego";
 
-  function setActiveTab(next: RuletaTab) {
+  function setActiveTab(next: MesaTab) {
     if (next === "juego") {
       searchParams.delete("tab");
     } else {
@@ -175,10 +181,18 @@ export default function DealerMesaView() {
   }
 
   const isRuleta = mesa?.gameType === "ruleta";
-  const tabItems: TabItem<RuletaTab>[] = [
-    { value: "juego", label: "Juego" },
-    { value: "reglas", label: "Reglas" },
-    { value: "score", label: "Score" },
+  // Los tabs de ruleta (juego/reglas/score) solo aplican al gameType ruleta.
+  // "Pagar" es universal: cualquier mesa puede usarlo para depositar a
+  // jugadores del roster del casino.
+  const tabItems: TabItem<MesaTab>[] = [
+    ...(isRuleta
+      ? ([
+          { value: "juego", label: "Juego" },
+          { value: "reglas", label: "Reglas" },
+          { value: "score", label: "Score" },
+        ] as TabItem<MesaTab>[])
+      : []),
+    { value: "pagar", label: "Pagar" },
   ];
 
   return (
@@ -196,8 +210,8 @@ export default function DealerMesaView() {
               </p>
             )}
           </div>
-          {isRuleta && (
-            <Tabs<RuletaTab>
+          {mesa && (
+            <Tabs<MesaTab>
               items={tabItems}
               value={activeTab}
               onChange={setActiveTab}
@@ -262,7 +276,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 
 type MesaBodyProps = {
   mesa: MyMesa;
-  tab: RuletaTab;
+  tab: MesaTab;
   onSpinComplete: (patternId: string) => Promise<void>;
   lastSpin: RouletteSpin | null;
   lastSpinLoading: boolean;
@@ -310,6 +324,17 @@ function MesaBody({
     }
     return null;
   }, [mesa]);
+
+  const canDeposit = mesa.casino.active && mesa.active;
+
+  if (tab === "pagar") {
+    return (
+      <>
+        {archivedBanner}
+        <DealerPayView casinoId={mesa.casino.id} canDeposit={canDeposit} />
+      </>
+    );
+  }
 
   if (mesa.gameType !== "ruleta") {
     return (

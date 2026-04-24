@@ -47,7 +47,7 @@ export default function PlayerPay() {
     return (
       <AppLayout
         title="Pagar a mesa"
-        subtitle={`Muestra el QR al tallador de ${submitted.dealerId}`}
+        subtitle={`Muestra el QR al dealer de ${submitted.dealerId}`}
         back={{ to: "/player/wallet", label: "Cartera" }}
       >
         <Card className="flex flex-col items-center gap-3 py-6">
@@ -56,7 +56,7 @@ export default function PlayerPay() {
           </Badge>
           <ShareableQR value={submitted.qr} label="QR de pago" />
           <p className="text-center text-xs text-[--color-cream]/70">
-            Cuando el tallador te devuelva el QR de confirmación, escanéalo aquí
+            Cuando el dealer te devuelva el QR de confirmación, escanéalo aquí
             para marcar las fichas como gastadas.
           </p>
         </Card>
@@ -67,7 +67,7 @@ export default function PlayerPay() {
                 onDecoded={(text) => {
                   const r = decodeQR(text);
                   if (!r.ok || r.payload.type !== "receipt") {
-                    alert("No es un recibo válido del tallador.");
+                    alert("No es un recibo válido del dealer.");
                     return;
                   }
                   if (r.payload.dealerId !== submitted.dealerId) {

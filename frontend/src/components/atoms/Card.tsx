@@ -33,7 +33,7 @@ export function Card({ tone = "felt", className, children, ...rest }: Props) {
   return (
     <div
       className={[
-        "rounded-3xl p-5 mx-4",
+        "rounded-3xl p-6 sm:p-7 mx-4",
         TONES[tone],
         className ?? "",
       ].join(" ")}

@@ -11,7 +11,7 @@ type Props = {
   loading: boolean;
   canDeposit: boolean;
   onDeposit: (row: EconomyWalletRow) => void;
-  onViewHistory: (row: EconomyWalletRow) => void;
+  onViewHistory?: (row: EconomyWalletRow) => void;
 };
 
 function normalize(s: string): string {
@@ -149,13 +149,15 @@ export function CasinoEconomyPlayersList({
                   >
                     Depositar
                   </Button>
-                  <Button
-                    variant="info"
-                    size="sm"
-                    onClick={() => onViewHistory(row)}
-                  >
-                    Historial
-                  </Button>
+                  {onViewHistory && (
+                    <Button
+                      variant="info"
+                      size="sm"
+                      onClick={() => onViewHistory(row)}
+                    >
+                      Historial
+                    </Button>
+                  )}
                 </div>
               </li>
             );

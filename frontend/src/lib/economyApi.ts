@@ -54,7 +54,7 @@ export async function apiBulkCreditCasinoPlayers(
   data: { amount: number; batchId: string; note?: string },
 ): Promise<BulkCreditResult> {
   const res = await fetch(
-    `${BASE}/casinos/${casinoId}/economy/bulk-credit`,
+    `${BASE}/me/casinos/${casinoId}/economy/bulk-credit`,
     {
       method: "POST",
       headers: authedHeaders(accessToken, true),
@@ -89,7 +89,7 @@ export async function apiCreditPlayer(
   data: { amount: number; batchId: string; note?: string },
 ): Promise<CreditPlayerResult> {
   const res = await fetch(
-    `${BASE}/casinos/${casinoId}/economy/players/${playerId}/credit`,
+    `${BASE}/me/casinos/${casinoId}/economy/players/${playerId}/credit`,
     {
       method: "POST",
       headers: authedHeaders(accessToken, true),
@@ -117,7 +117,7 @@ export async function apiListCasinoEconomyWallets(
   casinoId: string,
 ): Promise<{ rows: EconomyWalletRow[] }> {
   const res = await fetch(
-    `${BASE}/casinos/${casinoId}/economy/wallets`,
+    `${BASE}/me/casinos/${casinoId}/economy/wallets`,
     { headers: authedHeaders(accessToken) },
   );
   if (!res.ok) throw await parseError(res);
@@ -150,7 +150,7 @@ export async function apiListPlayerCasinoTransactions(
   playerId: string,
 ): Promise<{ transactions: WalletTransaction[] }> {
   const res = await fetch(
-    `${BASE}/casinos/${casinoId}/economy/players/${playerId}/transactions`,
+    `${BASE}/me/casinos/${casinoId}/economy/players/${playerId}/transactions`,
     { headers: authedHeaders(accessToken) },
   );
   if (!res.ok) throw await parseError(res);

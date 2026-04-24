@@ -4,22 +4,28 @@
  *   player_deposit → depósito individual del master a un jugador.
  *   slot_bet       → débito de la apuesta al jalar la palanca de la tragamonedas.
  *   slot_payout    → crédito del premio al ganar en la tragamonedas.
+ *   carrera_bet    → débito al apostar en la Carrera de Patrones.
+ *   carrera_payout → crédito del premio cuando la apuesta de la carrera gana.
  *
  * Reglas de signo:
- *   global_credit, player_deposit, slot_payout  → delta siempre > 0.
- *   slot_bet                                    → delta siempre < 0.
+ *   global_credit, player_deposit, slot_payout, carrera_payout → delta > 0.
+ *   slot_bet, carrera_bet                                       → delta < 0.
  */
 export type TransactionKind =
   | "global_credit"
   | "player_deposit"
   | "slot_bet"
-  | "slot_payout";
+  | "slot_payout"
+  | "carrera_bet"
+  | "carrera_payout";
 
 export const TRANSACTION_KINDS: readonly TransactionKind[] = [
   "global_credit",
   "player_deposit",
   "slot_bet",
   "slot_payout",
+  "carrera_bet",
+  "carrera_payout",
 ] as const;
 
 export function isTransactionKind(value: unknown): value is TransactionKind {
@@ -30,7 +36,7 @@ export function isTransactionKind(value: unknown): value is TransactionKind {
 }
 
 /** Kinds cuyo delta debe ser negativo (débitos de saldo). */
-export const DEBIT_KINDS: readonly TransactionKind[] = ["slot_bet"];
+export const DEBIT_KINDS: readonly TransactionKind[] = ["slot_bet", "carrera_bet"];
 
 export function isDebitKind(kind: TransactionKind): boolean {
   return (DEBIT_KINDS as readonly string[]).includes(kind);

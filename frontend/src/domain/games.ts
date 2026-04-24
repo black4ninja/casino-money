@@ -31,7 +31,7 @@ export const GAMES: readonly Game[] = [
   {
     id: "la_banca_sabe",
     name: "La Banca Sabe",
-    description: "Mesa conducida por un tallador; los jugadores retan a la banca.",
+    description: "Mesa conducida por un dealer; los jugadores retan a la banca.",
     emoji: "🏦",
     digitalPath: null,
     rulesPath: null,

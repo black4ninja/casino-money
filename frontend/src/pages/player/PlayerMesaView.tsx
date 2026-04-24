@@ -182,7 +182,7 @@ export default function PlayerMesaView() {
     <AppLayout
       title={mesa ? gameLabel : loading ? "Cargando…" : "Mesa"}
       subtitle={casino ? `${casino.name} · ${formatDate(casino.date)}` : undefined}
-      back={{ to: backHref, label: "Mesas del casino" }}
+      back={{ to: backHref, label: "" }}
       right={
         isRuleta ? (
           <Tabs<RuletaTab>

@@ -59,21 +59,21 @@ export class UpdateMesaUseCase {
           throw new AuthError(
             "INVALID_CREDENTIALS",
             404,
-            "Tallador no encontrado",
+            "Dealer no encontrado",
           );
         }
         if (!user.active) {
           throw new AuthError(
             "INACTIVE_ACCOUNT",
             400,
-            "Ese tallador está archivado",
+            "Ese dealer está archivado",
           );
         }
         if (user.role !== "dealer") {
           throw new AuthError(
             "INSUFFICIENT_ROLE",
             400,
-            "El usuario asignado debe ser tallador",
+            "El usuario asignado debe ser dealer",
           );
         }
         const casino = await this.casinos.findById(mesa.casinoId);
@@ -91,7 +91,7 @@ export class UpdateMesaUseCase {
           throw new AuthError(
             "INSUFFICIENT_ROLE",
             400,
-            "Ese tallador no está asignado a este casino",
+            "Ese dealer no está asignado a este casino",
           );
         }
         patch.talladorId = user.id;

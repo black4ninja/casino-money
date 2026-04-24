@@ -90,6 +90,11 @@ export function DepositToPlayerForm({
         onDeposited(res.outcome.balance);
       }
       batchIdRef.current = newBatchId();
+      // Cierra el modal tras un depósito exitoso. El `onDeposited` ya propagó
+      // el nuevo saldo al padre, así que la lista se actualiza antes del
+      // unmount. Si `outcome.status === "failed"` ya regresamos arriba, así
+      // que aquí solo llegamos en credited/skipped/recovered.
+      onClose();
     } catch (err) {
       const e = err as ApiError;
       setError(e.message ?? "No se pudo depositar");

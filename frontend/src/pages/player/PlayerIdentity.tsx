@@ -20,7 +20,7 @@ export default function PlayerIdentity() {
   return (
     <AppLayout
       title="Mi identidad"
-      subtitle="Muéstralo al tallador para recibir fichas"
+      subtitle="Muéstralo al dealer para recibir fichas"
       back={{ to: "/player/wallet", label: "Cartera" }}
     >
       <Card className="flex flex-col items-center gap-3 py-8">

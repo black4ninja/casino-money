@@ -122,7 +122,7 @@ export function AdminSidebar({ active, collapsed, onToggle }: Props) {
         <SidebarItem
           to="/dealer"
           icon="♦"
-          label="Modo tallador"
+          label="Modo dealer"
           hint="Operar mesa como dealer"
           variant="accent"
           collapsed={collapsed}

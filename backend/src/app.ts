@@ -18,6 +18,7 @@ import { slotsRoutes } from "./interfaces/http/routes/slots.routes.js";
 import { errorHandler } from "./interfaces/http/middlewares/errorHandler.js";
 import { requireAuth } from "./interfaces/http/middlewares/requireAuth.js";
 import { requireRole } from "./interfaces/http/middlewares/requireRole.js";
+import { requireCasinoEconomyAccess } from "./interfaces/http/middlewares/requireCasinoEconomyAccess.js";
 import { ParseAppUserRepo } from "./infrastructure/parse/repositories/AppUserRepo.js";
 import { ParseAppSessionRepo } from "./infrastructure/parse/repositories/AppSessionRepo.js";
 import { ParseCasinoRepo } from "./infrastructure/parse/repositories/CasinoRepo.js";
@@ -26,6 +27,7 @@ import { ParseRouletteSpinRepo } from "./infrastructure/parse/repositories/Roule
 import { ParseWalletRepo } from "./infrastructure/parse/repositories/WalletRepo.js";
 import { ParseWalletTransactionRepo } from "./infrastructure/parse/repositories/WalletTransactionRepo.js";
 import { ParseSlotMachineSpinRepo } from "./infrastructure/parse/repositories/SlotMachineSpinRepo.js";
+import { ParsePatternRaceBetRepo } from "./infrastructure/parse/repositories/PatternRaceBetRepo.js";
 import { JwtService } from "./infrastructure/crypto/jwtService.js";
 import { LoginUseCase } from "./application/use-cases/Login.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshToken.js";
@@ -64,6 +66,10 @@ import { ListPlayerCasinoTransactionsUseCase } from "./application/use-cases/Lis
 import { PlaySlotMachineSpinUseCase } from "./application/use-cases/PlaySlotMachineSpin.js";
 import { ListSlotMachineHistoryUseCase } from "./application/use-cases/ListSlotMachineHistory.js";
 import { GetMyCasinoWalletUseCase } from "./application/use-cases/GetMyCasinoWallet.js";
+import { GetCurrentPatternRaceUseCase } from "./application/use-cases/patternRace/GetCurrentPatternRace.js";
+import { PlacePatternRaceBetUseCase } from "./application/use-cases/patternRace/PlacePatternRaceBet.js";
+import { ListMyPatternRaceBetsUseCase } from "./application/use-cases/patternRace/ListMyPatternRaceBets.js";
+import { SettlePatternRaceBetsUseCase } from "./application/use-cases/patternRace/SettlePatternRaceBets.js";
 import { AuthController } from "./interfaces/http/controllers/AuthController.js";
 import { UserController } from "./interfaces/http/controllers/UserController.js";
 import { CasinoController } from "./interfaces/http/controllers/CasinoController.js";
@@ -72,6 +78,8 @@ import { MeController } from "./interfaces/http/controllers/MeController.js";
 import { RouletteSpinController } from "./interfaces/http/controllers/RouletteSpinController.js";
 import { EconomyController } from "./interfaces/http/controllers/EconomyController.js";
 import { SlotMachineController } from "./interfaces/http/controllers/SlotMachineController.js";
+import { PatternRaceController } from "./interfaces/http/controllers/PatternRaceController.js";
+import { carreraMeRoutes, carreraPublicRoutes } from "./interfaces/http/routes/carrera.routes.js";
 import { bootstrapInitialMaster } from "./infrastructure/seed/bootstrap.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -114,6 +122,7 @@ export async function createApp(env: Env): Promise<Express> {
   const walletRepo = new ParseWalletRepo(parse);
   const walletTxRepo = new ParseWalletTransactionRepo(parse);
   const slotSpinRepo = new ParseSlotMachineSpinRepo(parse);
+  const patternRaceBetRepo = new ParsePatternRaceBetRepo(parse);
   const jwt = new JwtService({
     accessSecret: env.JWT_ACCESS_SECRET,
     refreshSecret: env.JWT_REFRESH_SECRET,
@@ -195,6 +204,27 @@ export async function createApp(env: Env): Promise<Express> {
     slotSpinRepo,
   );
   const getMyCasinoWallet = new GetMyCasinoWalletUseCase(casinoRepo, walletRepo);
+  const settlePatternRaceBets = new SettlePatternRaceBetsUseCase(
+    walletRepo,
+    walletTxRepo,
+    patternRaceBetRepo,
+  );
+  const getCurrentPatternRace = new GetCurrentPatternRaceUseCase(
+    casinoRepo,
+    settlePatternRaceBets,
+  );
+  const placePatternRaceBet = new PlacePatternRaceBetUseCase(
+    casinoRepo,
+    userRepo,
+    walletRepo,
+    walletTxRepo,
+    patternRaceBetRepo,
+  );
+  const listMyPatternRaceBets = new ListMyPatternRaceBetsUseCase(
+    casinoRepo,
+    patternRaceBetRepo,
+    settlePatternRaceBets,
+  );
 
   const authController = new AuthController(login, refresh, logout, getMe, lookupMatricula);
   const userController = new UserController(
@@ -241,6 +271,11 @@ export async function createApp(env: Env): Promise<Express> {
     listSlotMachineHistory,
     getMyCasinoWallet,
   );
+  const patternRaceController = new PatternRaceController(
+    getCurrentPatternRace,
+    placePatternRaceBet,
+    listMyPatternRaceBets,
+  );
 
   const requireAuthMw = requireAuth(jwt);
   const requireMasterMw = requireRole("master");
@@ -258,9 +293,16 @@ export async function createApp(env: Env): Promise<Express> {
     "/api/v1/mesas/:mesaId/spins",
     rouletteSpinRoutes(spinController, requireAuthMw),
   );
+  // Montado bajo /me/ (no bajo /casinos/) para escapar del middleware
+  // requireMaster que gatea todo el router de casinos. El propio middleware
+  // requireCasinoEconomyAccess decide master-or-dealer-of-casino.
   app.use(
-    "/api/v1/casinos/:casinoId/economy",
-    economyRoutes(economyController, requireAuthMw, requireMasterMw),
+    "/api/v1/me/casinos/:casinoId/economy",
+    economyRoutes(
+      economyController,
+      requireAuthMw,
+      requireCasinoEconomyAccess(mesaRepo),
+    ),
   );
   // Montado bajo /me/ en vez de /casinos/ para escapar del middleware
   // requireMaster que aplica a todo el router de casinos — la tragamonedas
@@ -268,6 +310,17 @@ export async function createApp(env: Env): Promise<Express> {
   app.use(
     "/api/v1/me/casinos/:casinoId/slots",
     slotsRoutes(slotMachineController, requireAuthMw),
+  );
+  // Carrera de Patrones. El endpoint /current es PÚBLICO (sin auth) a
+  // propósito: cualquier pantalla puede proyectar la carrera tecleando la
+  // URL con el casinoId. Las apuestas sí requieren auth de jugador.
+  app.use(
+    "/api/v1/public/casinos/:casinoId/carrera",
+    carreraPublicRoutes(patternRaceController),
+  );
+  app.use(
+    "/api/v1/me/casinos/:casinoId/carrera",
+    carreraMeRoutes(patternRaceController, requireAuthMw),
   );
 
   // Unified deployment: serve the built SPA from the same origin as the API.

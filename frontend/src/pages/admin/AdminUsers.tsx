@@ -48,10 +48,10 @@ const TABS: readonly RoleTabConfig[] = [
   },
   {
     collection: "dealers",
-    title: "Talladores",
-    roleLabel: "tallador",
-    subtitle: "Talladores registrados",
-    emptyMessage: "Aún no hay talladores registrados.",
+    title: "Dealers",
+    roleLabel: "dealer",
+    subtitle: "Dealers registrados",
+    emptyMessage: "Aún no hay dealers registrados.",
     accent: "info",
   },
   {

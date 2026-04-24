@@ -87,14 +87,14 @@ export default function AdminSession() {
     return (
       <AppLayout
         title="Sesión activa"
-        subtitle="Comparte este QR con talladores y jugadores"
+        subtitle="Comparte este QR con dealers y jugadores"
         back={{ to: "/", label: "Inicio" }}
       >
         <Card className="flex flex-col items-center gap-4">
           <Badge tone="gold">{session.label}</Badge>
           <ShareableQR value={encodeQR(qr)} label="QR de sesión" />
           <p className="text-center text-sm text-[--color-cream]/70">
-            Cualquiera que escanee este QR podrá unirse. Los talladores, además,
+            Cualquiera que escanee este QR podrá unirse. Los dealers, además,
             necesitan la contraseña maestra para poder firmar fichas.
           </p>
           {(session.mesas?.length ?? 0) > 0 && (
@@ -144,7 +144,7 @@ export default function AdminSession() {
   return (
     <AppLayout
       title="Crear sesión"
-      subtitle="Define contraseña maestra — los talladores la usarán para firmar fichas"
+      subtitle="Define contraseña maestra — los dealers la usarán para firmar fichas"
       back={{ to: "/", label: "Inicio" }}
     >
       <Card className="flex flex-col gap-4">
@@ -172,7 +172,7 @@ export default function AdminSession() {
           value={mesasInput}
           onChange={(e) => setMesasInput(e.target.value)}
           placeholder="Mesa-1, Mesa-2, Mesa-3"
-          hint="Los talladores usarán estos nombres al iniciar su mesa."
+          hint="Los dealers usarán estos nombres al iniciar su mesa."
         />
         <Input
           label="Saldo inicial por mesa para cada jugador"

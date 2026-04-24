@@ -403,7 +403,7 @@ function Decoded({
           <p className="font-display text-lg">{payload.identity.alias}</p>
           <p className="text-xs text-[--color-cream]/60">
             Abre <strong>Jugador → Transferir</strong> y pega el código ahí para
-            iniciar un pago a este jugador, o como tallador emite fichas a
+            iniciar un pago a este jugador, o como dealer emite fichas a
             este alias desde tu mesa.
           </p>
         </Card>

@@ -8,14 +8,18 @@ import type { EconomyController } from "../controllers/EconomyController.js";
  *   POST /api/v1/casinos/:casinoId/economy/players/:playerId/credit
  *   GET  /api/v1/casinos/:casinoId/economy/wallets
  *   GET  /api/v1/casinos/:casinoId/economy/players/:playerId/transactions
+ *
+ * Autorización: en vez del viejo `requireMaster`, ahora usamos
+ * `requireCasinoEconomyAccess` que acepta master (siempre) o dealer con mesa
+ * activa en ese casino. El dealer paga a jugadores desde la vista de su mesa.
  */
 export function economyRoutes(
   ctrl: EconomyController,
   requireAuthMiddleware: RequestHandler,
-  requireMasterMiddleware: RequestHandler,
+  requireCasinoEconomyAccessMiddleware: RequestHandler,
 ): Router {
   const router = Router({ mergeParams: true });
-  router.use(requireAuthMiddleware, requireMasterMiddleware);
+  router.use(requireAuthMiddleware, requireCasinoEconomyAccessMiddleware);
   router.post("/bulk-credit", ctrl.bulkCredit);
   router.post("/players/:playerId/credit", ctrl.creditPlayer);
   router.get("/wallets", ctrl.listWallets);

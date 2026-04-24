@@ -73,7 +73,7 @@ export default function DealerLogin() {
 
   return (
     <AppLayout
-      title="Acceso tallador"
+      title="Acceso dealer"
       subtitle="Contraseña maestra + nombre de mesa"
       back={{ to: "/", label: "Inicio" }}
     >

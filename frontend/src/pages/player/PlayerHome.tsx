@@ -216,6 +216,31 @@ export default function PlayerHome() {
                 Jugar →
               </Button>
             </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-[--color-smoke]/60 px-4 py-3 ring-1 ring-inset ring-white/5">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span aria-hidden className="text-2xl leading-none shrink-0">
+                  🏁
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-lg text-[--color-ivory] truncate">
+                    Carrera de Patrones
+                  </div>
+                  <div className="font-label text-[0.6rem] tracking-widest text-[--color-cream]/60">
+                    Apuesta pasiva · corre sola cada 5 min
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="info"
+                size="sm"
+                onClick={() =>
+                  navigate(`/player/casino/${casino.id}/carrera`)
+                }
+                className="w-full sm:w-auto"
+              >
+                Apostar →
+              </Button>
+            </div>
           </Card>
 
           <Card tone="night" className="flex flex-col gap-3">
